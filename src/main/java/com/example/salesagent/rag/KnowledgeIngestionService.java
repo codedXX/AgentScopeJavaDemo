@@ -44,7 +44,32 @@ public final class KnowledgeIngestionService implements KnowledgeReadiness {
         recoverReadiness();
     }
 
+    /** 文件和索引更新共用同一写锁；失败时保留原文件，供重建重试。 */
+    public RebuildStatus upload(String filename, byte[] content) {
+        if (filename == null || filename.length() > 120 || filename.contains("/") || filename.contains("\\")
+                || filename.chars().anyMatch(Character::isISOControl)
+                || !filename.toLowerCase(java.util.Locale.ROOT).matches(".+\\.(md|txt)")) {
+            throw new IllegalArgumentException("仅支持文件名不超过120字符的 TXT、Markdown 文件");
+        }
+        if (content.length == 0 || content.length > 5 * 1024 * 1024) {
+            throw new IllegalArgumentException("文件不能为空，且不能超过 5 MB");
+        }
+        try {
+            String text = StandardCharsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(content)).toString();
+            if (text.replace("\uFEFF", "").isBlank() || text.indexOf('\0') >= 0) {
+                throw new IllegalArgumentException("请上传包含正文的 UTF-8 文本文件");
+            }
+        } catch (java.nio.charset.CharacterCodingException e) {
+            throw new IllegalArgumentException("文件必须使用 UTF-8 编码", e);
+        }
+        return rebuildWithUpload(filename, content);
+    }
+
     public RebuildStatus rebuild() {
+        return rebuildWithUpload(null, null);
+    }
+
+    private RebuildStatus rebuildWithUpload(String filename, byte[] content) {
         if (!rebuilding.compareAndSet(false, true)) throw new RebuildInProgressException();
         lock.writeLock().lock();
         long started = System.nanoTime();
@@ -52,6 +77,12 @@ public final class KnowledgeIngestionService implements KnowledgeReadiness {
             state = new RebuildStatus(false, 0, state.rebuiltAt(), "正在重建");
             Files.createDirectories(indexDir);
             Files.deleteIfExists(indexDir.resolve(MANIFEST));
+            if (filename != null) {
+                // 每次上传保存到独立目录，同名上传也不会覆盖已有资料。
+                Path uploadDir = knowledgeDir.resolve("uploads").resolve(java.util.UUID.randomUUID().toString());
+                Files.createDirectories(uploadDir);
+                Files.write(uploadDir.resolve(filename), content, java.nio.file.StandardOpenOption.CREATE_NEW);
+            }
             List<KnowledgeChunk> chunks = readChunks();
             List<float[]> vectors = embeddingClient.embed(chunks.stream().map(KnowledgeChunk::text).toList());
             validateVectors(chunks, vectors);

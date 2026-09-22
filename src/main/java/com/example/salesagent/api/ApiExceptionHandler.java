@@ -21,6 +21,14 @@ public class ApiExceptionHandler {
         int code = message.contains("正在") || message.contains("上限") ? 409 : 503;
         return ResponseEntity.status(code).body(Map.of("error", message));
     }
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<?> oversized(Exception ex) {
+        return ResponseEntity.status(413).body(Map.of("error", "文件过大，请上传不超过 5 MB 的文件"));
+    }
+    @ExceptionHandler(org.springframework.web.multipart.support.MissingServletRequestPartException.class)
+    public ResponseEntity<?> missingFile(Exception ex) {
+        return ResponseEntity.badRequest().body(Map.of("error", "请选择需要上传的文件"));
+    }
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> failure(Exception ex) { return ResponseEntity.status(502).body(Map.of("error", "上游服务调用失败，请检查模型权限、服务连接与配置")); }
 }

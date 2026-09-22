@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>知答 · 销售知识工作台</title><link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+<header><a class="brand" href="/" aria-label="知答首页"><span class="brand-mark">知</span>知答 <small>销售知识工作台</small></a><span class="header-note">让每个答案，有据可循</span></header>
+<main>
+  <aside>
+    <div class="section-label">KNOWLEDGE LIBRARY</div><h1>把资料变成答案。</h1><p class="intro">导入产品资料与业务文档，围绕你的知识库展开对话。</p>
+    <section class="library-card" aria-labelledby="library-title">
+      <div class="card-title"><h2 id="library-title">知识库</h2><span id="status" class="badge">连接中</span></div>
+      <div class="library-count"><strong id="chunk-count">—</strong><span>个知识片段</span></div>
+      <p id="status-detail" class="muted" role="status">正在读取知识库状态…</p>
+      <button id="refresh" class="text-button" type="button">刷新状态 ↻</button>
+    </section>
+    <form id="upload-form">
+      <label class="drop-zone" id="drop-zone" for="file"><span class="upload-icon" aria-hidden="true">↥</span><strong>选择或拖入一份资料</strong><span>TXT / Markdown · UTF-8 · 最大 5 MB</span><input id="file" name="file" type="file" accept=".txt,.md" required></label>
+      <p id="selected-file" class="muted">尚未选择文件</p>
+      <button id="upload" class="primary full" type="submit">上传并入库 <span aria-hidden="true">↗</span></button>
+    </form>
+    <p id="upload-feedback" class="feedback" role="status" aria-live="polite"></p>
+    <p class="fine-print">上传后将重新索引全部资料，期间知识检索暂不可用。同名文件会独立保存。</p>
+    <button id="rebuild" class="secondary full" type="button">重建知识库 / 失败后重试</button>
+  </aside>
+  <section class="chat-panel" aria-labelledby="chat-title">
+    <div class="chat-header"><div><div class="section-label">ASK YOUR KNOWLEDGE</div><h2 id="chat-title">知识问答</h2></div><button id="new-chat" class="secondary" type="button">＋ 新对话</button></div>
+    <div id="messages" class="messages" role="log" aria-live="polite" aria-relevant="additions text">
+      <div id="welcome" class="welcome"><div class="conversation-symbol" aria-hidden="true">“</div><h3>从一个问题开始</h3><p>可以询问产品信息，也可以接着上一条回答继续追问。<br>上传自己的资料后，即可围绕资料提问。</p><div class="suggestions"><button type="button">演示蛋白营养粉 A 每袋有多少蛋白质？</button><button type="button">DEMO-A 现在多少钱，还有库存吗？</button></div></div>
+    </div>
+    <div class="composer-wrap"><p id="chat-feedback" class="feedback" role="status"></p><form id="chat-form" class="composer"><label class="sr-only" for="question">输入问题</label><textarea id="question" placeholder="输入你的问题…" maxlength="2000" rows="2" required></textarea><div class="composer-bottom"><span>Enter 发送 · Shift + Enter 换行</span><button id="send" class="primary" type="submit">发送 ↑</button></div></form><p class="disclaimer">回答由 AI 生成，请结合引用来源核实。业务数据为演示数据。</p></div>
+  </section>
+</main>
+</body></html>

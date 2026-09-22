@@ -50,7 +50,8 @@ public class SalesAssistant {
         var toolkit = new Toolkit();
         var agent = ReActAgent.builder().name("sales-assistant").sysPrompt(SYSTEM).model(model.getObject())
                 .toolkit(toolkit).memory(memory).hook(trace).maxIters(6).build();
-        return new State(agent, memory, trace, toolkit);
+        // ReActAgent.Builder.build() 会复制 Toolkit，后续动态注册必须使用 Agent 内部的实例。
+        return new State(agent, memory, trace, agent.getToolkit());
     }
     public ChatResponse chat(ChatRequest request) {
         String id = request.sessionId() == null ? UUID.randomUUID().toString() : request.sessionId();
@@ -104,6 +105,11 @@ public class SalesAssistant {
         if (text == null || text.isBlank()) throw new IllegalStateException("模型回答为空");
         if (route.intent() == Intent.BUSINESS && state.trace.sources.stream().noneMatch(s -> s.contains("/demo/business/products/"))) {
             text = "未能获取业务接口的最新结果，当前价格和库存无法确认。"; sources = List.of();
+        } else if (route.intent() == Intent.REPOSITORY && available.isEmpty()) {
+            text = state.trace.failures.isEmpty()
+                    ? "本轮未取得仓库证据，无法确认项目内容。请重新提问并明确要求先查询文件树、再读取 README。"
+                    : "本轮仓库查询失败，尚未取得可用于回答的仓库资料。" + String.join("；", state.trace.failures);
+            sources = List.of();
         } else if (route.intent() != Intent.CHAT && available.isEmpty()) {
             text = "现有知识库和工具未提供足够证据，暂时无法确认这个问题。"; sources = List.of();
         }

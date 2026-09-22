@@ -72,6 +72,16 @@ Invoke-RestMethod http://127.0.0.1:8080/api/knowledge/rebuild -Method Post
 
 ## 4. 开始提问
 
+启动问答服务后，在浏览器打开 **http://127.0.0.1:8080/** 即可使用中文工作台，无需安装前端依赖。
+
+- 左侧选择或拖入 UTF-8 编码的 `.txt` / `.md` 文件（单文件最大 5 MB），点击“上传并入库”。
+- 上传通过 `POST /api/knowledge/upload`（multipart 字段 `file`）保存到 `knowledge/uploads/<随机ID>/`，自动切分、调用 Embedding，并全量重建 Milvus 和 Lucene 索引；保留已有资料，同名文件独立保存。
+- 重建期间暂停知识检索。失败后文件会保留，修复连接后点击“重建知识库 / 失败后重试”，无需重复上传。
+- 右侧输入问题并发送，可连续追问、查看引用来源和处理步骤；“新对话”会开始新的会话。刷新页面会清空页面对话。
+- 本版不解析 PDF、Word 或图片，请先转为 UTF-8 文本。大知识库的全量重建可能较慢，并会产生模型调用费用。
+
+也可继续使用接口：
+
 ```powershell
 $body = @{ sessionId = 'demo-001'; message = '演示蛋白营养粉 A 每袋有多少蛋白质？' } | ConvertTo-Json
 Invoke-RestMethod http://127.0.0.1:8080/api/chat -Method Post -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($body))
