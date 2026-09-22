@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: sales-agent-demo
+  profiles:
+    default: app
+server:
+  address: 127.0.0.1
+demo:
+  bailian:
+    api-key: sk-ws-H.PHPPRYP.LbX3.MEYCIQDIz-wrCcL4dQUTaV-L3TSXK2Dld6oqLJn5SO8QKWfRKAIhANQIGIFNNXJZnRqUUkYNEonmfJRLZvhkg17LY8cvkLeu
+    base-url: ${DASHSCOPE_BASE_URL:https://dashscope.aliyuncs.com/api/v1}
+    chat-model: qwen3.7-flash
+    embedding-model: qwen3.7-text-embedding
+    rerank-model: qwen3.7-text-rerank
+    dimension: 1024
+    timeout-seconds: 20
+  rag:
+    knowledge-dir: ./knowledge
+    index-dir: ./data/lucene
+    chunk-size: 500
+    overlap: 80
+    recall-top-k: 10
+    final-top-k: 5
+    # 不设置 min-rerank-score：相关性分数不是正确率，需要标注样例校准。
+  milvus:
+    uri: ${MILVUS_URI:http://localhost:19530}
+    token: ${MILVUS_TOKEN:}
+    collection: sales_knowledge
+  mcp:
+    url: http://127.0.0.1:8081/mcp
+    business-url: http://127.0.0.1:8081
+  github:
+    api-url: https://api.github.com
+    token: ${GITHUB_TOKEN:}
+logging:
+  level:
+    io.agentscope: WARN

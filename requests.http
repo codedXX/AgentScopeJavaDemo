@@ -1,0 +1,38 @@
+### 1. 查看状态（不需要 API Key）
+GET http://127.0.0.1:8080/api/knowledge/status
+
+### 2. 全量入库（需要百炼 Key + Milvus；会重建 demo collection）
+POST http://127.0.0.1:8080/api/knowledge/rebuild
+
+### 3. 产品知识
+POST http://127.0.0.1:8080/api/chat
+Content-Type: application/json
+
+{"sessionId":"learning-001","message":"演示蛋白营养粉 A 每袋有多少蛋白质？"}
+
+### 4. 同一会话追问
+POST http://127.0.0.1:8080/api/chat
+Content-Type: application/json
+
+{"sessionId":"learning-001","message":"它含乳成分吗？"}
+
+### 5. 实时业务工具（数据为模拟）
+POST http://127.0.0.1:8080/api/chat
+Content-Type: application/json
+
+{"sessionId":"business-001","message":"DEMO-A 现在多少钱，还有库存吗？"}
+
+### 6. 仓库工具
+POST http://127.0.0.1:8080/api/chat
+Content-Type: application/json
+
+{"sessionId":"code-001","message":"请读取 redis-cache-demo 的 README，说明这个仓库的用途并给出来源。"}
+
+### 7. 无证据问题
+POST http://127.0.0.1:8080/api/chat
+Content-Type: application/json
+
+{"message":"产品 B 的临床试验结果是什么？"}
+
+### 8. 查看模拟业务接口
+GET http://127.0.0.1:8081/demo/business/products/DEMO-A

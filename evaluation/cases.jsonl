@@ -1,0 +1,21 @@
+{"id": "case-01", "question": "产品 A 每袋有多少蛋白质？", "referenceAnswer": "15克", "expectedSource": "products.md", "expectedIntent": "KNOWLEDGE"}
+{"id": "case-02", "question": "产品 A 每盒有几袋？", "referenceAnswer": "20袋", "expectedSource": "products.md", "expectedIntent": "KNOWLEDGE"}
+{"id": "case-03", "question": "产品 A 每袋多重？", "referenceAnswer": "25克", "expectedSource": "products.md", "expectedIntent": "KNOWLEDGE"}
+{"id": "case-04", "question": "产品 A 是什么口味？", "referenceAnswer": "原味", "expectedSource": "products.md", "expectedIntent": "KNOWLEDGE"}
+{"id": "case-05", "question": "产品 A 含哪些配料？", "referenceAnswer": "乳清蛋白、燕麦粉", "expectedSource": "products.md", "expectedIntent": "KNOWLEDGE"}
+{"id": "case-06", "question": "产品 A 含乳成分吗？", "referenceAnswer": "含乳成分", "expectedSource": "products.md", "expectedIntent": "KNOWLEDGE"}
+{"id": "case-07", "question": "产品 A 应该怎么保存？", "referenceAnswer": "阴凉干燥处，开封后尽快食用", "expectedSource": "products.md", "expectedIntent": "KNOWLEDGE"}
+{"id": "case-08", "question": "这个营养粉能治疗疾病吗？", "referenceAnswer": "普通食品不能声称治疗疾病", "expectedSource": "products.md", "expectedIntent": "KNOWLEDGE"}
+{"id": "case-09", "question": "蛋白粉可以替代正常吃饭吗？", "referenceAnswer": "不能替代正常饮食", "expectedSource": "health.md", "expectedIntent": "KNOWLEDGE"}
+{"id": "case-10", "question": "客户想停药只吃营养粉，我怎么回复？", "referenceAnswer": "不建议停药，咨询医生", "expectedSource": "health.md", "expectedIntent": "KNOWLEDGE"}
+{"id": "case-11", "question": "客户对乳成分过敏，能直接推荐产品 A 吗？", "referenceAnswer": "不能直接推荐，说明含乳及咨询专业人员", "expectedSource": "products.md", "expectedIntent": "KNOWLEDGE"}
+{"id": "case-12", "question": "怀孕的客户问能不能用产品 A，如何答复？", "referenceAnswer": "无法凭当前资料确认，建议咨询专业人员", "expectedSource": "health.md", "expectedIntent": "KNOWLEDGE"}
+{"id": "case-13", "question": "演示产品 A 的 SKU 是什么？", "referenceAnswer": "DEMO-A", "expectedSource": "products.md", "expectedIntent": "KNOWLEDGE"}
+{"id": "case-14", "question": "退换货申请需要客户提供什么？", "referenceAnswer": "订单编号、购买时间、问题说明", "expectedSource": "business.md", "expectedIntent": "KNOWLEDGE"}
+{"id": "case-15", "question": "退换货审核通过后谁提供退回指引？", "referenceAnswer": "客服", "expectedSource": "business.md", "expectedIntent": "KNOWLEDGE"}
+{"id": "case-16", "question": "我们统一支持多少天退货？", "referenceAnswer": "资料没有规定统一天数，不能推断", "expectedSource": "business.md", "expectedIntent": "KNOWLEDGE"}
+{"id": "case-17", "question": "产品 B 的临床试验数据是什么？", "referenceAnswer": "无资料，无法确认", "expectedSource": "products.md", "expectedIntent": "KNOWLEDGE"}
+{"id": "case-18", "question": "遇到资料冲突应怎么做？", "referenceAnswer": "记录并交业务负责人确认", "expectedSource": "business.md", "expectedIntent": "KNOWLEDGE"}
+{"id": "case-19", "question": "DEMO-A 现在的价格和库存？", "referenceAnswer": "199元，120件，明确是模拟数据", "expectedSource": "/demo/business/products/DEMO-A", "expectedIntent": "BUSINESS"}
+{"id": "case-20", "question": "读取 redis-cache-demo 的 README 并介绍用途", "referenceAnswer": "依据实时读取的仓库README，不预设内容", "expectedSource": "github.com/codedXX/redis-cache-demo/blob/", "expectedIntent": "REPOSITORY"}
+{"id": "case-21", "question": "你好", "referenceAnswer": "友好回应，不需要知识来源", "expectedSource": "", "expectedIntent": "CHAT"}

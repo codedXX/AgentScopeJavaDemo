@@ -1,0 +1,7 @@
+target/
+.work/
+.env
+.idea/
+*.iml
+data/
+evaluation/results*.json*
