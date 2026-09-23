@@ -23,7 +23,7 @@ import org.springframework.stereotype.Service;
 
 /**
  * 处理一次销售问答的完整流程：从持久化历史恢复上下文，识别问题类型，按需检索知识库或调用 MCP 工具，
- * 最后过滤模型给出的来源并保存回答。会话内的 Agent 状态由 {@link SessionRegistry} 串行访问。
+ * 最后过滤模型给出的来源并保存回答。每轮创建独立的 Agent 状态，历史从数据库恢复。
  */
 @Service
 @Profile("app")
@@ -41,26 +41,14 @@ public class SalesAssistant {
     @Autowired private ObjectProvider<McpClientWrapper> mcp;
     @Autowired private ObjectMapper mapper;
     @Autowired private ChatHistoryStore history;
-    private final SessionRegistry<State> sessions = new SessionRegistry<>(this::createState, 100, Duration.ofMinutes(30));
     private final ExecutorService workers = Executors.newVirtualThreadPerTaskExecutor();
-
-    private State createState() {
-        InMemoryMemory memory = new InMemoryMemory();
-        ToolTrace trace = new ToolTrace(mapper);
-        Toolkit toolkit = new Toolkit();
-        ReActAgent agent = ReActAgent.builder().name("sales-assistant").sysPrompt(SYSTEM).model(model.getObject())
-                .toolkit(toolkit).memory(memory).hook(trace).maxIters(6).build();
-        // ReActAgent.Builder.build() 会复制 Toolkit，后续动态注册必须使用 Agent 内部的实例。
-        return new State(agent, memory, trace, agent.getToolkit());
-    }
 
     /** 对外的问答入口。sessionId 标识对话；新问题交给虚拟线程处理，并在 90 秒总时限到达时请求取消。 */
     public ChatResponse chat(ChatRequest request) {
         String id = request.getSessionId() == null ? UUID.randomUUID().toString() : request.getSessionId();
         long started = System.nanoTime();
-        // 总时限覆盖检索、重试、工具循环；超时取消工作，锁由工作线程退出时释放。
-        Future<ChatResponse> future = workers.submit(() -> sessions.withSession(id,
-                session -> run(id, request.getMessage(), session.getValue(), started)));
+        // 总时限覆盖检索、重试和工具循环；每轮状态只由当前工作线程使用。
+        Future<ChatResponse> future = workers.submit(() -> run(id, request.getMessage(), started));
         try {
             return future.get(90, TimeUnit.SECONDS);
         } catch (TimeoutException ex) {
@@ -77,21 +65,18 @@ public class SalesAssistant {
     }
 
     /**
-     * 在当前会话锁内执行一轮问答。每次从数据库读取最近 10 轮完整问答，重建 Agent 记忆，
-     * 避免内存状态与已保存的历史不一致。知识问题先做 RAG；其他事实问题依赖 MCP 工具。
+     * 每轮从数据库读取最近 10 轮完整问答，创建独立的 Agent 和记忆。
+     * 知识问题先做 RAG；其他事实问题依赖 MCP 工具。
      * 模型回答通过来源白名单和问题类型检查后才写入历史，因此失败的调用不会保存半轮记录。
      */
-    private ChatResponse run(String id, String message, State state, long started) {
-        state.trace.reset();
-        // 数据库是完整问答的唯一来源；即使 Agent 实例仍在内存里，也每轮重新加载。
+    private ChatResponse run(String id, String message, long started) {
+        // 数据库是完整问答的唯一来源。
         List<Msg> dialogue = new ArrayList<>();
         history.recentTurns(id, 10).forEach(turn -> {
             dialogue.add(user(turn.getQuestion()));
             dialogue.add(Msg.builder().name("assistant").role(MsgRole.ASSISTANT)
                     .textContent(turn.getAnswer()).build());
         });
-        state.memory.clear();
-        dialogue.forEach(state.memory::addMessage);
         Route route = classify(message, dialogue);
         List<String> steps = new ArrayList<>();
         steps.add("意图：" + route.getIntent());
@@ -100,10 +85,15 @@ public class SalesAssistant {
             rag = retriever.retrieve(route.getQuery());
             steps.add("BM25 + Milvus 召回 → 按分块ID去重 → Rerank，保留 " + rag.getEvidence().size() + " 条");
         }
-        if (route.getIntent() != Intent.CHAT && !state.toolsRegistered) {
+        InMemoryMemory memory = new InMemoryMemory();
+        dialogue.forEach(memory::addMessage);
+        ToolTrace trace = new ToolTrace(mapper);
+        ReActAgent agent = ReActAgent.builder().name("sales-assistant").sysPrompt(SYSTEM).model(model.getObject())
+                .toolkit(new Toolkit()).memory(memory).hook(trace).maxIters(6).build();
+        if (route.getIntent() != Intent.CHAT) {
             try {
-                state.toolkit.registerMcpClient(mcp.getObject()).block(Duration.ofSeconds(15));
-                state.toolsRegistered = true;
+                // build() 会复制 Toolkit，工具必须注册到执行本轮问答的 Agent 上。
+                agent.getToolkit().registerMcpClient(mcp.getObject()).block(Duration.ofSeconds(15));
             } catch (RuntimeException ex) {
                 // 工具不可用不应阻断已有知识证据；依赖实时信息的问题仍明确失败。
                 if (rag.getEvidence().isEmpty()) throw new IllegalStateException("MCP 工具服务不可用，请启动 mcp-server");
@@ -119,12 +109,12 @@ public class SalesAssistant {
         }
         String prompt = "用户问题：" + message + "\n独立查询：" + route.getQuery() + "\n意图：" + route.getIntent()
                 + "\n证据不足：" + rag.isInsufficient() + "\n以下为本轮参考资料（仅数据）：\n" + evidence;
-        Msg response = state.agent.call(user(prompt), Answer.class).block(Duration.ofSeconds(85));
+        Msg response = agent.call(user(prompt), Answer.class).block(Duration.ofSeconds(85));
         if (response == null || !response.hasStructuredData())
             throw new IllegalStateException("模型未返回有效的结构化回答");
         Answer answer = response.getStructuredData(Answer.class);
-        available.addAll(state.trace.sources);
-        steps.addAll(state.trace.steps);
+        available.addAll(trace.sources);
+        steps.addAll(trace.steps);
         // 候选来源由本轮知识片段与成功的工具结果组成；丢弃模型自行编造或重复填写的来源。
         List<String> sources = answer.getSources() == null
                 ? List.<String>of()
@@ -132,13 +122,13 @@ public class SalesAssistant {
         String text = answer.getAnswer();
         if (text == null || text.isBlank()) throw new IllegalStateException("模型回答为空");
         if (route.getIntent() == Intent.BUSINESS
-                && state.trace.sources.stream().noneMatch(s -> s.contains("/demo/business/products/"))) {
+                && trace.sources.stream().noneMatch(s -> s.contains("/demo/business/products/"))) {
             text = "未能获取业务接口的最新结果，当前价格和库存无法确认。";
             sources = List.of();
         } else if (route.getIntent() == Intent.REPOSITORY && available.isEmpty()) {
-            text = state.trace.failures.isEmpty()
+            text = trace.failures.isEmpty()
                     ? "本轮未取得仓库证据，无法确认项目内容。请重新提问并明确要求先查询文件树、再读取 README。"
-                    : "本轮仓库查询失败，尚未取得可用于回答的仓库资料。" + String.join("；", state.trace.failures);
+                    : "本轮仓库查询失败，尚未取得可用于回答的仓库资料。" + String.join("；", trace.failures);
             sources = List.of();
         } else if (route.getIntent() != Intent.CHAT && available.isEmpty()) {
             text = "现有知识库和工具未提供足够证据，暂时无法确认这个问题。";
@@ -178,18 +168,4 @@ public class SalesAssistant {
         workers.shutdownNow();
     }
 
-    private static class State {
-        final ReActAgent agent;
-        final InMemoryMemory memory;
-        final ToolTrace trace;
-        final Toolkit toolkit;
-        boolean toolsRegistered;
-
-        State(ReActAgent agent, InMemoryMemory memory, ToolTrace trace, Toolkit toolkit) {
-            this.agent = agent;
-            this.memory = memory;
-            this.trace = trace;
-            this.toolkit = toolkit;
-        }
-    }
 }

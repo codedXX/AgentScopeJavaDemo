@@ -10,8 +10,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import reactor.core.publisher.Mono;
 
 /**
- * 每个会话独立的工具调用记录器。只收集可观察的工具名称、来源和失败原因，供回答校验及前端步骤展示；
- * 不收集或返回模型的内部思考内容。每轮开始前由调用方清空记录。
+ * 每轮问答独立的工具调用记录器。只收集可观察的工具名称、来源和失败原因，供回答校验及前端步骤展示；
+ * 不收集或返回模型的内部思考内容。
  */
 final class ToolTrace implements Hook {
     private final ObjectMapper mapper;

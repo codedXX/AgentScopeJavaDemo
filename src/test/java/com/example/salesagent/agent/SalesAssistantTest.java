@@ -159,7 +159,9 @@ class SalesAssistantTest {
             assertEquals(List.of(source), result.getSources());
             assertTrue(sawRepositorySchema.get(), "模型应收到实际已注册的工具定义");
             assertTrue(result.getSteps().stream().anyMatch(step -> step.contains("工具成功")));
-            verify(client).callTool("listRepositoryFiles", Map.of());
+            ChatResponse next = assistant.chat(new ChatRequest("repository-2", "读取仓库 README"));
+            assertEquals(List.of(source), next.getSources());
+            verify(client, times(2)).callTool("listRepositoryFiles", Map.of());
             verifyNoInteractions(retriever);
         } finally { assistant.close(); server.stop(0); }
     }
