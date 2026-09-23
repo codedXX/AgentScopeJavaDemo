@@ -6,14 +6,14 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ToolTraceTest {
     @Test void retainsValidSourceAndReportsSuccess() {
-        var trace = new ToolTrace(new ObjectMapper());
+        ToolTrace trace = new ToolTrace(new ObjectMapper());
         trace.recordResult("listRepositoryFiles", "{\"source\":\"https://github.com/example/repo/tree/abc\",\"files\":[\"README.md\"]}");
         assertEquals(1, trace.sources.size());
         assertTrue(trace.failures.isEmpty());
         assertTrue(trace.steps.getFirst().contains("工具成功"));
     }
     @Test void explainsErrorWithoutExposingArbitraryUpstreamContent() {
-        var trace = new ToolTrace(new ObjectMapper());
+        ToolTrace trace = new ToolTrace(new ObjectMapper());
         trace.recordResult("listRepositoryFiles", "Error: 工具失败：GitHub HTTP 403：private-sensitive-text");
         assertTrue(trace.failures.getFirst().contains("403"));
         assertFalse(trace.steps.toString().contains("private-sensitive-text"));
@@ -23,7 +23,7 @@ class ToolTraceTest {
         assertTrue(trace.failures.isEmpty());
     }
     @Test void distinguishesTimeoutAndInvalidResult() {
-        var trace = new ToolTrace(new ObjectMapper());
+        ToolTrace trace = new ToolTrace(new ObjectMapper());
         trace.recordResult("listRepositoryFiles", "Error: TimeoutException");
         assertTrue(trace.failures.getFirst().contains("超时"));
         trace.recordResult("listRepositoryFiles", "{\"source\":42}");

@@ -1,12 +1,12 @@
 package com.example.salesagent.api;
 import com.example.salesagent.rag.KnowledgeIngestionService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.*;
 
 @RestController @Profile("app")
 public class KnowledgeController {
-    private final KnowledgeIngestionService ingestion;
-    public KnowledgeController(KnowledgeIngestionService ingestion) { this.ingestion = ingestion; }
+    @Autowired private KnowledgeIngestionService ingestion;
     @PostMapping("/api/knowledge/rebuild") public Object rebuild() { return ingestion.rebuild(); }
     @PostMapping(value = "/api/knowledge/upload", consumes = "multipart/form-data")
     public Object upload(@RequestParam("file") org.springframework.web.multipart.MultipartFile file) throws java.io.IOException {

@@ -3,6 +3,7 @@ package com.example.salesagent.rag;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.example.salesagent.model.KnowledgeChunk;
+import com.example.salesagent.model.SearchHit;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -19,11 +20,11 @@ class LuceneKeywordIndexTest {
             index.reset();
             index.upsert(List.of(product, health));
 
-            var hits = index.search("离线缓存", 10);
+            List<SearchHit> hits = index.search("离线缓存", 10);
 
             assertEquals(1, hits.size());
-            assertEquals(product, hits.getFirst().chunk());
-            assertEquals("bm25", hits.getFirst().channel());
+            assertEquals(product, hits.getFirst().getChunk());
+            assertEquals("bm25", hits.getFirst().getChannel());
         }
     }
 
@@ -36,7 +37,7 @@ class LuceneKeywordIndexTest {
             index.upsert(List.of(new KnowledgeChunk("new", "火箭推进引擎", "new.md", 0)));
 
             assertTrue(index.search("香蕉", 10).isEmpty());
-            assertEquals("new", index.search("火箭", 10).getFirst().chunk().chunkId());
+            assertEquals("new", index.search("火箭", 10).getFirst().getChunk().getChunkId());
         }
     }
 }

@@ -1,8 +1,9 @@
 'use strict';
 const $ = id => document.getElementById(id);
-let sessionId = null;
+let sessionId = localStorage.getItem('active-session');
 let sending = false;
 let indexing = false;
+let loadingSession = true;
 async function request(url, options = {}) {
   const response = await fetch(url, options);
   const data = await response.json().catch(() => null);
@@ -29,11 +30,12 @@ async function refresh() {
   }
 }
 function controls() {
-  $('send').disabled = sending || indexing;
-  $('new-chat').disabled = sending;
+  $('send').disabled = sending || indexing || loadingSession;
+  $('new-chat').disabled = sending || loadingSession;
   $('upload').disabled = indexing || sending;
   $('rebuild').disabled = indexing || sending;
   $('file').disabled = indexing;
+  document.querySelectorAll('.session-item').forEach(button => { button.disabled = sending || indexing || loadingSession; });
 }
 function validateFile(file) {
   if (!file) throw new Error('请先选择文件');
@@ -98,36 +100,102 @@ function addDetails(article, title, items) {
   for (const item of items) { const li = document.createElement('li'); li.textContent = item; list.append(li); }
   details.append(summary, list); article.append(details);
 }
+function showAnswer(article, data) {
+  article.querySelector('.message-body').textContent = data.answer;
+  addDetails(article, '引用来源', data.sources);
+  addDetails(article, '处理步骤', data.steps);
+  const timing = document.createElement('div'); timing.className = 'timing';
+  timing.textContent = `检索 ${data.retrievalMs} ms · 总耗时 ${(data.totalMs / 1000).toFixed(1)} s`;
+  article.append(timing);
+}
+function clearMessages() {
+  document.querySelectorAll('.message').forEach(node => node.remove());
+  $('welcome').hidden = false;
+}
+function highlightSession() {
+  document.querySelectorAll('.session-item').forEach(button => {
+    button.setAttribute('aria-current', String(button.dataset.sessionId === sessionId));
+  });
+}
+async function refreshHistory() {
+  // 每次重新取会话列表，重建按钮节点并同步高亮当前会话；发送成功后可看到新的排序和标题。
+  const sessions = await request('/api/sessions');
+  const list = $('session-list'); list.replaceChildren();
+  if (!sessions.length) {
+    const empty = document.createElement('p'); empty.className = 'history-empty';
+    empty.textContent = '还没有保存的对话。发送第一个问题后会显示在这里。'; list.append(empty);
+  }
+  for (const session of sessions) {
+    const button = document.createElement('button'); button.type = 'button';
+    button.className = 'session-item'; button.dataset.sessionId = session.id;
+    const title = document.createElement('span'); title.className = 'session-title'; title.textContent = session.title;
+    const date = document.createElement('span'); date.className = 'session-date';
+    date.textContent = new Date(session.updatedAt).toLocaleString('zh-CN');
+    button.append(title, date);
+    button.addEventListener('click', () => { void selectSession(session.id); });
+    list.append(button);
+  }
+  highlightSession(); controls();
+  return sessions;
+}
+async function selectSession(id) {
+  // 加载期间禁用发送和切换；只有轮次请求成功才更新本地会话 ID 并替换消息区域。
+  // 请求失败时保留当前会话和页面内容，让用户可以直接重试。
+  if (sending || indexing) return;
+  loadingSession = true; controls(); feedback('history-feedback', '');
+  try {
+    const turns = await request(`/api/sessions/${encodeURIComponent(id)}/turns`);
+    sessionId = id; localStorage.setItem('active-session', id);
+    clearMessages();
+    for (const turn of turns) {
+      addMessage('user', turn.question);
+      showAnswer(addMessage('assistant', turn.answer), turn);
+    }
+    highlightSession();
+  } catch (error) {
+    feedback('history-feedback', `读取会话失败：${error.message}`, true);
+  } finally { loadingSession = false; controls(); }
+}
 $('chat-form').addEventListener('submit', async e => {
   e.preventDefault();
   const message = $('question').value.trim();
-  if (!message || sending || indexing) return;
-  // 客户端提前生成 ID，使网络失败后重试仍然沿用同一会话。
-  sessionId ||= crypto.randomUUID();
+  if (!message || sending || indexing || loadingSession) return;
+  // 第一次提问前就在客户端生成会话 ID，网络失败后仍能把重试发往同一会话。
+  if (!sessionId) sessionId = crypto.randomUUID();
   sending = true; controls(); feedback('chat-feedback', '');
-  addMessage('user', message); $('question').value = '';
+  const pendingUser = addMessage('user', message); $('question').value = '';
   const answer = addMessage('assistant', '正在查找资料并整理回答…');
   try {
     const data = await request('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId, message }) });
     sessionId = data.sessionId;
-    answer.querySelector('.message-body').textContent = data.answer;
-    addDetails(answer, '引用来源', data.sources); addDetails(answer, '处理步骤', data.steps);
-    const timing = document.createElement('div'); timing.className = 'timing';
-    timing.textContent = `检索 ${data.retrievalMs} ms · 总耗时 ${(data.totalMs / 1000).toFixed(1)} s`; answer.append(timing);
+    localStorage.setItem('active-session', sessionId);
+    showAnswer(answer, data);
+    try { await refreshHistory(); }
+    catch (error) { feedback('history-feedback', `刷新历史列表失败：${error.message}`, true); }
   } catch (error) {
-    answer.querySelector('.message-body').textContent = `未能取得回答：${error.message}`;
+    pendingUser.remove(); answer.remove();
+    if (!$('messages').querySelector('.message')) $('welcome').hidden = false;
     if (!$('question').value.trim()) $('question').value = message;
-    feedback('chat-feedback', '问题仍可编辑；检查服务后重新发送。', true);
+    feedback('chat-feedback', `未能取得回答：${error.message}。问题仍可编辑，检查服务后重试。`, true);
   } finally { sending = false; controls(); scrollMessages(); $('question').focus(); }
 });
 $('question').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('chat-form').requestSubmit(); }
 });
 $('new-chat').addEventListener('click', () => {
-  sessionId = null; document.querySelectorAll('.message').forEach(node => node.remove());
-  $('welcome').hidden = false; $('question').value = ''; feedback('chat-feedback', ''); $('question').focus();
+  sessionId = null;
+  localStorage.removeItem('active-session'); clearMessages(); highlightSession();
+  $('question').value = ''; feedback('chat-feedback', ''); $('question').focus();
 });
 document.querySelectorAll('.suggestions button').forEach(button => button.addEventListener('click', () => {
   $('question').value = button.textContent; $('question').focus();
 }));
 void refresh();
+void (async () => {
+  try {
+    const sessions = await refreshHistory();
+    if (sessionId && sessions.some(item => item.id === sessionId)) await selectSession(sessionId);
+    else if (sessionId) { sessionId = null; localStorage.removeItem('active-session'); highlightSession(); }
+  } catch (error) { feedback('history-feedback', `读取历史会话失败：${error.message}`, true); }
+  finally { loadingSession = false; controls(); }
+})();

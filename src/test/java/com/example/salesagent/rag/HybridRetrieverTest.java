@@ -15,7 +15,7 @@ class HybridRetrieverTest {
 
     @Test
     void mergesByChunkIdBeforeRerankingWithoutComparingChannelScores() {
-        var a = chunk("A"); var b = chunk("B"); var c = chunk("C"); var d = chunk("D");
+        KnowledgeChunk a = chunk("A"); KnowledgeChunk b = chunk("B"); KnowledgeChunk c = chunk("C"); KnowledgeChunk d = chunk("D");
         KeywordIndex keyword = (query, topK) -> List.of(
                 new SearchHit(a, 100, "bm25"), new SearchHit(b, 90, "bm25"), new SearchHit(c, 80, "bm25"));
         VectorChunkStore vector = (queryVector, topK) -> List.of(
@@ -30,9 +30,9 @@ class HybridRetrieverTest {
 
         RagResult result = retriever.retrieve("问题");
 
-        assertEquals(List.of("A", "B", "C", "D"), submitted.stream().map(KnowledgeChunk::chunkId).toList());
-        assertEquals("D", result.evidence().getFirst().chunk().chunkId());
-        assertFalse(result.insufficient());
+        assertEquals(List.of("A", "B", "C", "D"), submitted.stream().map(KnowledgeChunk::getChunkId).toList());
+        assertEquals("D", result.getEvidence().getFirst().getChunk().getChunkId());
+        assertFalse(result.isInsufficient());
     }
 
     @Test
@@ -43,8 +43,8 @@ class HybridRetrieverTest {
 
         RagResult result = retriever.retrieve("没有答案的问题");
 
-        assertTrue(result.insufficient());
-        assertTrue(result.evidence().isEmpty());
+        assertTrue(result.isInsufficient());
+        assertTrue(result.getEvidence().isEmpty());
     }
 
     @Test
@@ -62,6 +62,6 @@ class HybridRetrieverTest {
                 (v, k) -> List.of(), texts -> List.of(new float[]{1}),
                 (q, c, k) -> List.of(new SearchHit(a, .39, "rerank")), () -> true, 10, 5, .4);
 
-        assertTrue(retriever.retrieve("问题").insufficient());
+        assertTrue(retriever.retrieve("问题").isInsufficient());
     }
 }

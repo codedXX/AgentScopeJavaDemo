@@ -9,7 +9,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import reactor.core.publisher.Mono;
 
-/** 记录可观察工具事件，不记录或返回模型的隐式思考过程。每个会话独立。 */
+/**
+ * 每个会话独立的工具调用记录器。只收集可观察的工具名称、来源和失败原因，供回答校验及前端步骤展示；
+ * 不收集或返回模型的内部思考内容。每轮开始前由调用方清空记录。
+ */
 final class ToolTrace implements Hook {
     private final ObjectMapper mapper;
     final List<String> steps = new CopyOnWriteArrayList<>();
@@ -19,29 +22,41 @@ final class ToolTrace implements Hook {
     private final Set<String> tools = Set.of("listRepositoryFiles", "readRepositoryFile", "getProductStatus");
     ToolTrace(ObjectMapper mapper) { this.mapper = mapper; }
     void reset() { steps.clear(); sources.clear(); failures.clear(); calls.set(0); }
+    /**
+     * 在 PreActingEvent 中限制本轮最多五次指定工具调用，并将无参数的文件树工具规范为空对象。
+     * 在 PostActingEvent 中解析工具文本；只有 JSON 包含非空 source 才算成功，其余结果记录安全的失败提示。
+     */
     @Override public <T extends HookEvent> Mono<T> onEvent(T event) {
-        if (event instanceof PreActingEvent pre && tools.contains(pre.getToolUse().getName())) {
-            if (calls.incrementAndGet() > 5) return Mono.error(new IllegalStateException("本轮工具调用超过5次上限"));
-            // 固定仓库的文件树工具无参数。模型可能省略 arguments 或带入仓库名，
-            // 在 SDK 的 JSON Schema 校验前统一为合法空对象；其他工具仍严格校验。
-            if ("listRepositoryFiles".equals(pre.getToolUse().getName())) {
-                var original = pre.getToolUse();
-                pre.setToolUse(ToolUseBlock.builder().id(original.getId()).name(original.getName())
-                        .input(Map.of()).content("{}").build());
-            }
-            steps.add("调用工具：" + pre.getToolUse().getName());
-        }
-        if (event instanceof PostActingEvent post && tools.contains(post.getToolUse().getName())) {
-            for (var block : post.getToolResult().getOutput()) if (block instanceof TextBlock text) {
-                recordResult(post.getToolUse().getName(), text.getText());
+        if (event instanceof PreActingEvent) {
+            PreActingEvent pre = (PreActingEvent) event;
+            if (tools.contains(pre.getToolUse().getName())) {
+                if (calls.incrementAndGet() > 5) return Mono.error(new IllegalStateException("本轮工具调用超过5次上限"));
+                // 固定仓库的文件树工具无参数。模型可能省略 arguments 或带入仓库名，
+                // 在 SDK 的 JSON Schema 校验前统一为合法空对象；其他工具仍严格校验。
+                if ("listRepositoryFiles".equals(pre.getToolUse().getName())) {
+                    ToolUseBlock original = pre.getToolUse();
+                    pre.setToolUse(ToolUseBlock.builder().id(original.getId()).name(original.getName())
+                            .input(Map.of()).content("{}").build());
+                }
+                steps.add("调用工具：" + pre.getToolUse().getName());
             }
         }
-
+        if (event instanceof PostActingEvent) {
+            PostActingEvent post = (PostActingEvent) event;
+            if (tools.contains(post.getToolUse().getName())) {
+                for (Object block : post.getToolResult().getOutput()) {
+                    if (block instanceof TextBlock) {
+                        TextBlock text = (TextBlock) block;
+                        recordResult(post.getToolUse().getName(), text.getText());
+                    }
+                }
+            }
+        }
         return Mono.just(event);
     }
     void recordResult(String tool, String output) {
         try {
-            var node = mapper.readTree(output);
+            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(output);
             if (node != null && node.path("source").isTextual() && !node.path("source").asText().isBlank()) {
                 sources.add(node.path("source").asText());
                 steps.add("工具成功：" + tool);
@@ -56,14 +71,25 @@ final class ToolTrace implements Hook {
     // 不把任意上游异常原文回传浏览器，避免暴露认证信息或响应内容。
     private static String failureReason(String output) {
         String text = output == null ? "" : output;
-        var http = java.util.regex.Pattern.compile("GitHub HTTP (\\d{3})").matcher(text);
+        java.util.regex.Matcher http = java.util.regex.Pattern.compile("GitHub HTTP (\\d{3})").matcher(text);
         if (http.find()) {
-            return switch (http.group(1)) {
-                case "401" -> "GitHub 认证失败（401），请检查 MCP 服务的 GITHUB_TOKEN";
-                case "403", "429" -> "GitHub 拒绝访问或触发限流（" + http.group(1) + "），请检查权限与额度后重试";
-                case "404" -> "GitHub 仓库或文件不存在，或当前账号无权访问（404）";
-                default -> "GitHub 请求失败（HTTP " + http.group(1) + "），请稍后重试";
-            };
+            String reason;
+            switch (http.group(1)) {
+                case "401":
+                    reason = "GitHub 认证失败（401），请检查 MCP 服务的 GITHUB_TOKEN";
+                    break;
+                case "403":
+                case "429":
+                    reason = "GitHub 拒绝访问或触发限流（" + http.group(1) + "），请检查权限与额度后重试";
+                    break;
+                case "404":
+                    reason = "GitHub 仓库或文件不存在，或当前账号无权访问（404）";
+                    break;
+                default:
+                    reason = "GitHub 请求失败（HTTP " + http.group(1) + "），请稍后重试";
+                    break;
+            }
+            return reason;
         }
         String lower = text.toLowerCase(Locale.ROOT);
         if (lower.contains("parameter validation failed") || lower.contains("schema validation error"))

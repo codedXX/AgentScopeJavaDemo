@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class GitHubRepositoryToolsTest {
     @Test void readsFileAtExactCommitAndKeepsSource() throws Exception {
-        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/repos/codedXX/redis-cache-demo/contents/README.md", exchange -> {
             assertEquals("ref=" + "a".repeat(40), exchange.getRequestURI().getQuery());
             String encoded = Base64.getEncoder().encodeToString("演示仓库".getBytes(StandardCharsets.UTF_8));
@@ -20,8 +20,8 @@ class GitHubRepositoryToolsTest {
         });
         server.start();
         try {
-            var tools = new GitHubRepositoryTools("http://127.0.0.1:" + server.getAddress().getPort(), "", new ObjectMapper());
-            var result = tools.readRepositoryFile("README.md", "a".repeat(40));
+            GitHubRepositoryTools tools = new GitHubRepositoryTools("http://127.0.0.1:" + server.getAddress().getPort(), "", new ObjectMapper());
+            java.util.Map<String, Object> result = tools.readRepositoryFile("README.md", "a".repeat(40));
             assertEquals("演示仓库", result.get("text"));
             assertTrue(result.get("source").toString().contains("/blob/" + "a".repeat(40)));
             assertThrows(IllegalArgumentException.class, () -> tools.readRepositoryFile("../.env", "a".repeat(40)));
@@ -29,10 +29,10 @@ class GitHubRepositoryToolsTest {
         } finally { server.stop(0); }
     }
     @Test void propagatesUnavailableRepository() throws Exception {
-        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/", e -> { e.sendResponseHeaders(404, -1); e.close(); }); server.start();
         try {
-            var tools = new GitHubRepositoryTools("http://127.0.0.1:" + server.getAddress().getPort(), "", new ObjectMapper());
+            GitHubRepositoryTools tools = new GitHubRepositoryTools("http://127.0.0.1:" + server.getAddress().getPort(), "", new ObjectMapper());
             assertThrows(IllegalStateException.class, tools::listRepositoryFiles);
         } finally { server.stop(0); }
     }

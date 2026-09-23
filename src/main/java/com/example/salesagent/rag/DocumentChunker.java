@@ -4,6 +4,7 @@ import com.example.salesagent.model.KnowledgeChunk;
 import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.DocumentSplitter;
 import dev.langchain4j.data.document.splitter.DocumentSplitters;
+import dev.langchain4j.data.segment.TextSegment;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -13,7 +14,10 @@ import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 
-/** 清洗 UTF-8 文档，并委托 LangChain4j 的字符递归切分器处理中文文本。 */
+/**
+ * 将知识目录内的 UTF-8 文件转换为可检索分块。统一换行和空白字符后，使用 LangChain4j 递归切分器
+ * 按配置的大小与重叠量拆分；每个分块保留相对路径和在文档中的顺序，供最终回答追溯来源。
+ */
 public final class DocumentChunker {
     private final Path knowledgeRoot;
     private final DocumentSplitter splitter;
@@ -44,7 +48,7 @@ public final class DocumentChunker {
         if (text.isBlank()) return List.of();
 
         List<KnowledgeChunk> result = new ArrayList<>();
-        var segments = splitter.split(Document.from(text));
+        List<TextSegment> segments = splitter.split(Document.from(text));
         for (int i = 0; i < segments.size(); i++) {
             String chunkText = segments.get(i).text();
             result.add(new KnowledgeChunk(hash(source, i, chunkText), chunkText, source, i));
@@ -52,6 +56,10 @@ public final class DocumentChunker {
         return List.copyOf(result);
     }
 
+    /**
+     * 对相对路径、分块序号和正文计算 SHA-256。相同文件再次重建得到稳定 ID；
+     * 文件内容或切分位置变化时产生新 ID，便于两路索引按同一键去重。
+     */
     private static String hash(String source, int ordinal, String text) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");

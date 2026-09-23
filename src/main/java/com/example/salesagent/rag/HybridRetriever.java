@@ -7,7 +7,10 @@ import com.example.salesagent.model.RagResult;
 import java.util.LinkedHashMap;
 import java.util.List;
 
-/** 串行执行双路召回，按分块 ID 去重后才交给模型重排序。 */
+/**
+ * 混合检索入口。先用 Lucene BM25 搜索关键词，再对查询生成向量并搜索 Milvus；两路结果按分块 ID 去重。
+ * 原始分数来自不同体系，不能直接混排，因此将候选片段交给 Rerank 模型统一排序。
+ */
 public final class HybridRetriever {
     private final KeywordIndex keywordIndex;
     private final VectorChunkStore vectorStore;
@@ -37,21 +40,26 @@ public final class HybridRetriever {
         return readiness.withReadLock(() -> retrieveLocked(query, started));
     }
 
+    /**
+     * 整个召回与重排过程位于就绪读锁内，确保这一轮使用同一版索引。
+     * 无候选时返回空证据；有候选时根据首条重排分数判断证据是否不足，并保留总检索耗时。
+     */
     private RagResult retrieveLocked(String query, long started) {
         if (!readiness.isReady()) throw new KnowledgeNotReadyException();
         LinkedHashMap<String, KnowledgeChunk> candidates = new LinkedHashMap<>();
-        keywordIndex.search(query, recallTopK).forEach(hit -> candidates.putIfAbsent(hit.chunk().chunkId(), hit.chunk()));
+        keywordIndex.search(query, recallTopK).forEach(hit -> candidates.putIfAbsent(
+                hit.getChunk().getChunkId(), hit.getChunk()));
 
         List<float[]> embedded = embeddingClient.embed(List.of(query));
         if (embedded.size() != 1) throw new IllegalStateException("查询向量返回数量不正确");
         vectorStore.search(embedded.getFirst(), recallTopK)
-                .forEach(hit -> candidates.putIfAbsent(hit.chunk().chunkId(), hit.chunk()));
+                .forEach(hit -> candidates.putIfAbsent(hit.getChunk().getChunkId(), hit.getChunk()));
 
         long elapsed = elapsedMs(started);
         if (candidates.isEmpty()) return new RagResult(List.of(), true, elapsed);
         List<com.example.salesagent.model.SearchHit> ranked = rerankClient.rank(query, List.copyOf(candidates.values()), finalTopK);
         boolean insufficient = ranked.isEmpty()
-                || minRerankScore != null && ranked.getFirst().score() < minRerankScore;
+                || minRerankScore != null && ranked.getFirst().getScore() < minRerankScore;
         return new RagResult(List.copyOf(ranked), insufficient, elapsedMs(started));
     }
 

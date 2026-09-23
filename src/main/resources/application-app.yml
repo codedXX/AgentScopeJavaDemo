@@ -1,6 +1,10 @@
 server:
   port: 8080
 spring:
+  datasource:
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/sales_agent}
+    username: ${POSTGRES_USER:sales_agent}
+    password: ${POSTGRES_PASSWORD:change-me-local}
   servlet:
     multipart:
       max-file-size: 5MB

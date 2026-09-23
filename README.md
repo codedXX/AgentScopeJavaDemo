@@ -1,6 +1,6 @@
 # 销售问答 Agent Demo
 
-这是一个面向学习的 Java Demo：**Spring Boot + AgentScope + Milvus + Lucene BM25 + 百炼**。
+这是一个面向学习的 Java Demo：**Spring Boot + AgentScope + PostgreSQL + Milvus + Lucene BM25 + 百炼**。
 只使用一套 Agent 框架，不引入 Spring AI Alibaba。详细架构、代码导读与接口说明见 [项目文档](docs/PROJECT.md)。
 
 ## 1. 你能学到什么
@@ -34,11 +34,12 @@ Reranker 前只合并去重，不使用 RRF。两路原始检索分数不能直�
 
 ```powershell
 mvn clean verify
+$env:POSTGRES_PASSWORD = "请设置本机数据库密码"
 docker compose up -d
 docker compose ps
 ```
 
-等待 Milvus 的 `standalone` 服务健康后继续。Compose 仅将端口暴露到本机，使用命名卷保存数据。
+等待 Milvus 的 `standalone` 和 PostgreSQL 的 `postgres` 服务健康后继续。Compose 仅将端口暴露到本机，使用命名卷保存数据。首次启动时 PostgreSQL 会创建 `sales_agent` 数据库；应用启动时 Flyway 自动创建聊天记录表。
 Windows 下重新打包前先退出正在运行该 JAR 的 Java 进程，否则文件锁可能导致 `repackage` 失败。
 
 终端一启动 MCP 工具服务（不需要百炼 Key）：
@@ -55,11 +56,14 @@ java -jar target/sales-agent-demo-1.0.0.jar --spring.profiles.active=mcp-server
 $env:DASHSCOPE_API_KEY = "你的百炼 API Key"
 $env:DASHSCOPE_BASE_URL = "https://dashscope.aliyuncs.com/api/v1"
 $env:MILVUS_URI = "http://localhost:19530"
+$env:POSTGRES_PASSWORD = "与启动 Compose 时相同的密码"
 java -jar target/sales-agent-demo-1.0.0.jar --spring.profiles.active=app
 ```
 
 `.env.example` 是变量说明，Spring Boot 不会自动读取 `.env`。不要把真实 Key 写进 YAML 或提交仓库。
 也可以使用 `mvn spring-boot:run "-Dspring-boot.run.profiles=app"` 和 `mcp-server` 两个 profile 启动。
+
+如果从 IntelliJ IDEA 的 Run/Debug Configuration 启动 `app` profile，请在该配置的 **Environment variables** 中设置 `POSTGRES_PASSWORD`（与首次创建 PostgreSQL 容器时使用的密码一致）和 `DASHSCOPE_API_KEY`。IDEA 不会自动继承另一个 PowerShell 窗口里设置的 `$env:POSTGRES_PASSWORD`。若启动日志出现 `The server requested SCRAM-based authentication, but no password was provided`，先检查这项配置；已有 `postgres-data` 卷时，修改 Compose 环境变量不会更改数据库里已有的密码。
 
 终端三导入知识：
 
@@ -77,7 +81,9 @@ Invoke-RestMethod http://127.0.0.1:8080/api/knowledge/rebuild -Method Post
 - 左侧选择或拖入 UTF-8 编码的 `.txt` / `.md` 文件（单文件最大 5 MB），点击“上传并入库”。
 - 上传通过 `POST /api/knowledge/upload`（multipart 字段 `file`）保存到 `knowledge/uploads/<随机ID>/`，自动切分、调用 Embedding，并全量重建 Milvus 和 Lucene 索引；保留已有资料，同名文件独立保存。
 - 重建期间暂停知识检索。失败后文件会保留，修复连接后点击“重建知识库 / 失败后重试”，无需重复上传。
-- 右侧输入问题并发送，可连续追问、查看引用来源和处理步骤；“新对话”会开始新的会话。刷新页面会清空页面对话。
+- 右侧输入问题并发送，可连续追问、查看引用来源和处理步骤。中间的历史会话列表可切换旧对话；刷新页面会恢复上次选中的会话，服务重启后也能继续追问。“新对话”从空白会话开始。
+- 问答成功后，完整的问题、回答、来源、处理步骤和耗时会一起存入 PostgreSQL；失败的问答不会加入历史。知识原文仍存于 `knowledge/uploads/`，检索索引仍由 Lucene 和 Milvus 持久化。
+- 发送失败后可以重试，但如果服务端已经保存回答、响应却在网络中丢失，重试可能会在同一会话中再次执行并保存一轮相同问题。
 - 本版不解析 PDF、Word 或图片，请先转为 UTF-8 文本。大知识库的全量重建可能较慢，并会产生模型调用费用。
 
 也可继续使用接口：

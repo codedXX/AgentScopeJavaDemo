@@ -12,20 +12,27 @@ import java.util.function.Supplier;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.context.annotation.*;
 
-/** 真正的 MCP Streamable HTTP 服务，协议处理完全复用官方 SDK。 */
+/**
+ * MCP 服务端装配类。通过 Streamable HTTP 的 /mcp 端点暴露仓库文件树、文件读取和模拟商品状态三个工具；
+ * 传输、工具注册和响应格式由官方 MCP SDK 负责。
+ */
 @Configuration @Profile("mcp-server")
 public class McpServerConfiguration {
     @Bean public HttpServletStreamableServerTransportProvider mcpTransport() {
         return HttpServletStreamableServerTransportProvider.builder().jsonMapper(McpJsonMapper.getDefault()).mcpEndpoint("/mcp").build();
     }
     @Bean public ServletRegistrationBean<HttpServletStreamableServerTransportProvider> mcpServlet(HttpServletStreamableServerTransportProvider transport) {
-        var registration = new ServletRegistrationBean<>(transport, "/mcp");
+        ServletRegistrationBean<HttpServletStreamableServerTransportProvider> registration = new ServletRegistrationBean<>(transport, "/mcp");
         registration.setAsyncSupported(true);
         return registration;
     }
+    /**
+     * 注册工具名称、说明与必填字符串参数。仓库文件树不接收参数；读取文件需要 path 和 commitSha；
+     * 商品状态需要 sku。工具实现返回 JSON 文本，错误通过 MCP 的 isError 标志传递。
+     */
     @Bean(destroyMethod = "close") public McpSyncServer mcpServer(HttpServletStreamableServerTransportProvider transport, DemoProperties p, ObjectMapper mapper) {
-        var github = new GitHubRepositoryTools(p.github().apiUrl(), p.github().token(), mapper);
-        var business = new BusinessTools(p.mcp().businessUrl(), mapper);
+        GitHubRepositoryTools github = new GitHubRepositoryTools(p.getGithub().getApiUrl(), p.getGithub().getToken(), mapper);
+        BusinessTools business = new BusinessTools(p.getMcp().getBusinessUrl(), mapper);
         return McpServer.sync(transport).serverInfo("sales-demo-tools", "1.0.0")
                 .capabilities(McpSchema.ServerCapabilities.builder().tools(false).build())
                 .toolCall(tool("listRepositoryFiles", "列出 codedXX/redis-cache-demo 的源码文件，返回固定 commitSha 和来源。", Map.of()),
@@ -44,7 +51,9 @@ public class McpServerConfiguration {
     }
     private static String arg(McpSchema.CallToolRequest request, String name) {
         Object value = request.arguments() == null ? null : request.arguments().get(name);
-        if (!(value instanceof String text) || text.isBlank()) throw new IllegalArgumentException("缺少工具参数 " + name);
+        if (!(value instanceof String)) throw new IllegalArgumentException("缺少工具参数 " + name);
+        String text = (String) value;
+        if (text.isBlank()) throw new IllegalArgumentException("缺少工具参数 " + name);
         return text;
     }
     private static McpSchema.CallToolResult result(Supplier<?> action, ObjectMapper mapper) {

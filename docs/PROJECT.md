@@ -12,12 +12,12 @@
 - Lucene 中文 BM25 + Milvus 语义向量混合召回。
 - 候选按 chunkId 合并去重，然后由百炼 Reranker 重排序。
 - 模型识别意图、将追问改写为独立检索问题。
-- AgentScope 多步骤工具执行、单机会话隔离与过期清理。
+- AgentScope 多步骤工具执行、单机会话隔离，以及 PostgreSQL 聊天记录持久化。
 - 真正的 MCP Streamable HTTP Client/Server。
 - 读取 `codedXX/redis-cache-demo` 文件树和源码；调用模拟业务 HTTP 接口。
 - 返回答案、经过校验的来源、可观察步骤和耗时。
 
-首版不包含前端、认证、多租户、分布式会话、增量索引及复杂 PDF/Word 解析。产品与业务资料为虚构示例；业务接口模拟价格和库存，不连接真实交易系统。
+当前包含本机工作台，但不包含认证、多租户、分布式会话、增量索引及复杂 PDF/Word 解析。产品与业务资料为虚构示例；业务接口模拟价格和库存，不连接真实交易系统。
 
 ## 2. 技术栈与版本
 
@@ -32,6 +32,8 @@
 | Apache Lucene | 9.12.3 | 中文分析、BM25、本地文件索引 |
 | Milvus Java SDK | 2.6.6 | collection、索引、写入、检索 |
 | Milvus Server | 2.6.6 | 持久化向量存储和 COSINE 搜索 |
+| PostgreSQL / MyBatis-Plus | 17 / 3.5.17 | 保存会话及完整问答 |
+| Flyway | 随 Spring Boot 管理 | 聊天记录表的版本化迁移 |
 | 生成模型 | qwen3.7-flash | 意图识别、工具决策和回答 |
 | 向量模型 | qwen3.7-text-embedding | 文档和问题向量化，配置 1024 维 |
 | 重排序模型 | qwen3.7-text-rerank | 对候选文本与问题的相关性打分 |
@@ -64,7 +66,7 @@ flowchart LR
 - `/mcp` 是官方 SDK 提供的协议端点，不是普通 JSON REST Controller。
 - 模型调用走百炼 API；MCP 负责连接工具和数据源。
 
-`compose.yaml` 包含 Milvus standalone、etcd、MinIO，命名卷保存数据。端口仅绑定本机。MinIO 使用 `quay.io/minio/minio`，原因是旧模板中的 Docker Hub 镜像已经不可拉取；版本仍采用模板的固定版本。
+`compose.yaml` 包含 PostgreSQL、Milvus standalone、etcd、MinIO，命名卷保存数据。端口仅绑定本机。MinIO 使用 `quay.io/minio/minio`，原因是旧模板中的 Docker Hub 镜像已经不可拉取；版本仍采用模板的固定版本。
 Compose 项目名称固定为 `sales-agent-demo`，容器与网络使用项目隔离名称。MinIO 只在内部网络提供服务，不映射 9000/9001，避免与本机已有 MinIO 冲突；对宿主机仅开放 Milvus 的 19530 和健康检查 9091。
 
 详细启动命令见项目根目录 [README](../README.md)。
@@ -137,7 +139,7 @@ RRF 根据多个结果列表中的名次计算融合分数，适合候选很多�
 
 AgentScope 用 `generate_response` 临时工具实现结构化输出，这也是框架功能，不需要再自行编写 JSON 提取器。
 
-**会话管理：** 每个 sessionId 对应自己的 AgentScope InMemoryMemory；同会话请求串行保护，繁忙会话拒绝并发提交。最多 100 个会话，闲置 30 分钟在后续请求时惰性清理；重启清空。保留最近 10 轮完整用户/助手对，新一轮恢复到 Memory，避免保留半个工具调用对。会话初始化在全局锁之外，不阻塞其他会话。
+**会话管理：** PostgreSQL 的 `chat_session` 和 `chat_turn` 保存完整会话与成功的问答轮次；MyBatis-Plus 负责读写，Flyway 负责建表。每轮从数据库读取最近 10 轮完整问答，恢复到 AgentScope Memory，重启后仍可追问。内存中的会话容器只保留临时 Agent 状态并保护同会话并发：最多 100 个活跃会话，闲置 30 分钟后惰性清理，不影响数据库历史。会话初始化在全局锁之外，不阻塞其他会话。完整问答在一次数据库事务中保存；数据库写入失败时本轮返回错误。
 
 **执行限制：** 最多 5 次业务工具调用，Agent maxIters=6，整轮请求最多 90 秒。单次外部调用超时 20 秒，Embedding/Rerank 仅对限流或临时服务错误做最多 2 次退避重试。steps 只展示检索与工具事件，不输出隐式思考过程。
 
@@ -174,6 +176,8 @@ MCP 的工具描述和 Schema 集中在 `McpServerConfiguration`，Client 注册
 | GET /api/knowledge/status | 查看 ready、分块数和上次重建状态 |
 | POST /api/knowledge/rebuild | 全量重建示例知识库 |
 | POST /api/chat | 问答，支持 sessionId |
+| GET /api/sessions | 按最近使用时间列出已保存的会话 |
+| GET /api/sessions/{id}/turns | 读取指定会话的完整问答；不存在返回 404 |
 
 请求示例：
 
@@ -194,12 +198,12 @@ MCP 的工具描述和 Schema 集中在 `McpServerConfiguration`，Client 注册
 }
 ```
 
-问题不得为空，最多 2000 字符；sessionId 如提供，只允许字母、数字和连字符，长度 1–64。
+问题不得为空，最多 2000 字符；sessionId 如提供，只允许字母、数字和连字符，长度 1–64。网络失败后重试可能重复执行并保存同一问题，因为接口只通过 sessionId 识别会话，不区分新问题和重试。
 400 表示输入错误，409 表示会话/重建冲突或容量限制，503 表示知识库/必要服务未就绪，502 表示未分类的上游异常。失败响应不返回凭证或堆栈。
 
 ## 9. 配置和常见问题
 
-主配置位于 `src/main/resources/application.yml`，两个 profile 文件只覆盖端口。
+主配置位于 `src/main/resources/application.yml`，`app` profile 另配置 PostgreSQL 连接，`mcp-server` profile 关闭聊天表迁移。
 
 | 配置 | 默认值 | 注意事项 |
 |---|---|---|
@@ -207,6 +211,9 @@ MCP 的工具描述和 Schema 集中在 `McpServerConfiguration`，Client 注册
 | DASHSCOPE_BASE_URL | https://dashscope.aliyuncs.com/api/v1 | 使用与 Key 相同地域的地址 |
 | MILVUS_URI | http://localhost:19530 | 真实集成测试需显式设置该环境变量 |
 | MILVUS_TOKEN | 空 | 本地演示；有鉴权服务须配置 |
+| POSTGRES_URL | jdbc:postgresql://localhost:5432/sales_agent | app 的聊天记录数据库 |
+| POSTGRES_USER | sales_agent | app 的数据库用户 |
+| POSTGRES_PASSWORD | 空 | 启动 Compose 和 app 时设置相同密码 |
 | GITHUB_TOKEN | 空 | 公开仓库可匿名访问，但受限流 |
 | demo.rag.chunk-size / overlap | 500 / 80 | 字符递归切分参数 |
 | demo.rag.recall-top-k / final-top-k | 10 / 5 | 双路召回数量与最终证据数量 |

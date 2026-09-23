@@ -16,7 +16,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-/** 以写锁全量重建两路索引；只有计数与清单一致时发布 ready=true。 */
+/**
+ * 管理知识文件入库和两路索引的就绪状态。上传与重建共用写锁，检索使用读锁，避免查询读到重建中的索引。
+ * 磁盘清单保存预期分块数和向量维度；只有重建成功且两路计数一致时才标记为可检索。
+ */
 public final class KnowledgeIngestionService implements KnowledgeReadiness {
     private static final String MANIFEST = "manifest.json";
     private final DocumentChunker chunker;
@@ -44,7 +47,10 @@ public final class KnowledgeIngestionService implements KnowledgeReadiness {
         recoverReadiness();
     }
 
-    /** 文件和索引更新共用同一写锁；失败时保留原文件，供重建重试。 */
+    /**
+     * 校验文件名、大小和 UTF-8 正文后触发全量重建。上传文件保存在独立目录，失败时不会删除原文件；
+     * 修复外部服务后可直接调用 rebuild() 重试，不必再次上传。
+     */
     public RebuildStatus upload(String filename, byte[] content) {
         if (filename == null || filename.length() > 120 || filename.contains("/") || filename.contains("\\")
                 || filename.chars().anyMatch(Character::isISOControl)
@@ -69,12 +75,16 @@ public final class KnowledgeIngestionService implements KnowledgeReadiness {
         return rebuildWithUpload(null, null);
     }
 
+    /**
+     * 原子标志先阻止重复重建，再获取写锁等待已有检索结束。先删除旧清单，使中途失败不会在下次启动时
+     * 被误认为就绪；随后切分全部文件、生成向量、清空并写入两路索引、校验计数，最后发布新清单。
+     */
     private RebuildStatus rebuildWithUpload(String filename, byte[] content) {
         if (!rebuilding.compareAndSet(false, true)) throw new RebuildInProgressException();
         lock.writeLock().lock();
         long started = System.nanoTime();
         try {
-            state = new RebuildStatus(false, 0, state.rebuiltAt(), "正在重建");
+            state = new RebuildStatus(false, 0, state.getRebuiltAt(), "正在重建");
             Files.createDirectories(indexDir);
             Files.deleteIfExists(indexDir.resolve(MANIFEST));
             if (filename != null) {
@@ -84,7 +94,7 @@ public final class KnowledgeIngestionService implements KnowledgeReadiness {
                 Files.write(uploadDir.resolve(filename), content, java.nio.file.StandardOpenOption.CREATE_NEW);
             }
             List<KnowledgeChunk> chunks = readChunks();
-            List<float[]> vectors = embeddingClient.embed(chunks.stream().map(KnowledgeChunk::text).toList());
+            List<float[]> vectors = embeddingClient.embed(chunks.stream().map(KnowledgeChunk::getText).toList());
             validateVectors(chunks, vectors);
 
             // 两路都从空索引开始；任何异常都会保持未就绪，下一次可安全重试。
@@ -96,13 +106,13 @@ public final class KnowledgeIngestionService implements KnowledgeReadiness {
             verifyCounts(chunks.size());
 
             Instant rebuiltAt = Instant.now();
-            writeManifest(new Manifest(chunks.size(), rebuiltAt, dimension));
+            writeManifest(new IndexManifest(chunks.size(), rebuiltAt, dimension));
             state = new RebuildStatus(true, chunks.size(), rebuiltAt,
                     "重建完成，耗时 " + ((System.nanoTime() - started) / 1_000_000) + "ms");
             return state;
         } catch (Exception e) {
-            state = new RebuildStatus(false, 0, state.rebuiltAt(), "重建失败: " + e.getMessage());
-            if (e instanceof RuntimeException runtime) throw runtime;
+            state = new RebuildStatus(false, 0, state.getRebuiltAt(), "重建失败: " + e.getMessage());
+            if (e instanceof RuntimeException) throw (RuntimeException) e;
             throw new IllegalStateException("知识库重建失败", e);
         } finally {
             lock.writeLock().unlock();
@@ -111,13 +121,13 @@ public final class KnowledgeIngestionService implements KnowledgeReadiness {
     }
 
     public RebuildStatus status() { return state; }
-    @Override public boolean isReady() { return state.ready(); }
+    @Override public boolean isReady() { return state.isReady(); }
 
     @Override public <T> T withReadLock(Supplier<T> action) {
         // 重建一旦排队，新检索立即返回未就绪，避免等待后误以为服务一直可用。
         if (rebuilding.get() || !lock.readLock().tryLock()) throw new KnowledgeNotReadyException();
         try {
-            if (rebuilding.get() || !state.ready()) throw new KnowledgeNotReadyException();
+            if (rebuilding.get() || !state.isReady()) throw new KnowledgeNotReadyException();
             return action.get();
         }
         finally { lock.readLock().unlock(); }
@@ -152,20 +162,28 @@ public final class KnowledgeIngestionService implements KnowledgeReadiness {
         }
     }
 
+    /**
+     * 启动恢复只信任已落盘的清单，并检查配置维度以及 Lucene、Milvus 的实际记录数。
+     * 任一检查失败都保持未就绪，等待显式重建。
+     */
     private void recoverReadiness() {
         Path manifestPath = indexDir.resolve(MANIFEST);
         if (!Files.isRegularFile(manifestPath)) return;
         try {
-            Manifest manifest = mapper.readValue(manifestPath.toFile(), Manifest.class);
-            if (manifest.dimension() != dimension) throw new IllegalStateException("向量维度已变化");
-            verifyCounts(manifest.chunkCount());
-            state = new RebuildStatus(true, manifest.chunkCount(), manifest.rebuiltAt(), "已从清单恢复");
+            IndexManifest manifest = mapper.readValue(manifestPath.toFile(), IndexManifest.class);
+            if (manifest.getDimension() != dimension) throw new IllegalStateException("向量维度已变化");
+            verifyCounts(manifest.getChunkCount());
+            state = new RebuildStatus(true, manifest.getChunkCount(), manifest.getRebuiltAt(), "已从清单恢复");
         } catch (Exception e) {
             state = new RebuildStatus(false, 0, null, "索引与清单不一致，需要重建");
         }
     }
 
-    private void writeManifest(Manifest manifest) throws IOException {
+    /**
+     * 先完整写入临时 JSON，再尝试原子替换正式清单；文件系统不支持原子移动时退回普通替换。
+     * 清单写入是重建流程的最后一步，供启动恢复判断索引是否已发布。
+     */
+    private void writeManifest(IndexManifest manifest) throws IOException {
         Files.createDirectories(indexDir);
         Path temporary = indexDir.resolve(MANIFEST + ".tmp");
         Files.writeString(temporary, mapper.writeValueAsString(manifest), StandardCharsets.UTF_8);
@@ -177,5 +195,4 @@ public final class KnowledgeIngestionService implements KnowledgeReadiness {
         }
     }
 
-    private record Manifest(long chunkCount, Instant rebuiltAt, int dimension) {}
 }

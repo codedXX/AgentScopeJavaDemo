@@ -21,9 +21,9 @@ class DocumentChunkerTest {
         List<KnowledgeChunk> chunks = new DocumentChunker(tempDir, 120, 20).split(file);
 
         assertTrue(chunks.size() > 1);
-        assertTrue(chunks.stream().allMatch(chunk -> chunk.text().length() <= 120));
-        assertTrue(chunks.stream().allMatch(chunk -> chunk.source().equals("product/demo.md")));
-        assertEquals(0, chunks.getFirst().ordinal());
+        assertTrue(chunks.stream().allMatch(chunk -> chunk.getText().length() <= 120));
+        assertTrue(chunks.stream().allMatch(chunk -> chunk.getSource().equals("product/demo.md")));
+        assertEquals(0, chunks.getFirst().getOrdinal());
     }
 
     @Test
@@ -46,7 +46,7 @@ class DocumentChunkerTest {
         List<KnowledgeChunk> repeated = chunker.split(first);
         List<KnowledgeChunk> otherSource = chunker.split(second);
 
-        assertEquals(one.getFirst().chunkId(), repeated.getFirst().chunkId());
-        assertNotEquals(one.getFirst().chunkId(), otherSource.getFirst().chunkId());
+        assertEquals(one.getFirst().getChunkId(), repeated.getFirst().getChunkId());
+        assertNotEquals(one.getFirst().getChunkId(), otherSource.getFirst().getChunkId());
     }
 }

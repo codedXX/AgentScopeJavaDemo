@@ -25,6 +25,11 @@
     <p class="fine-print">上传后将重新索引全部资料，期间知识检索暂不可用。同名文件会独立保存。</p>
     <button id="rebuild" class="secondary full" type="button">重建知识库 / 失败后重试</button>
   </aside>
+  <nav class="history-panel" aria-label="历史会话">
+    <div class="history-heading"><div class="section-label">PAST CONVERSATIONS</div><h2>历史会话</h2></div>
+    <p id="history-feedback" class="feedback" role="status"></p>
+    <div id="session-list" class="session-list"><p class="history-empty">正在读取会话…</p></div>
+  </nav>
   <section class="chat-panel" aria-labelledby="chat-title">
     <div class="chat-header"><div><div class="section-label">ASK YOUR KNOWLEDGE</div><h2 id="chat-title">知识问答</h2></div><button id="new-chat" class="secondary" type="button">＋ 新对话</button></div>
     <div id="messages" class="messages" role="log" aria-live="polite" aria-relevant="additions text">

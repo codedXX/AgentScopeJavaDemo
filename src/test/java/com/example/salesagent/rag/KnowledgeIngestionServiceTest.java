@@ -23,8 +23,8 @@ class KnowledgeIngestionServiceTest {
 
         RebuildStatus rebuilt = service.rebuild();
 
-        assertTrue(rebuilt.ready());
-        assertEquals(1, rebuilt.chunkCount());
+        assertTrue(rebuilt.isReady());
+        assertEquals(1, rebuilt.getChunkCount());
         assertEquals(keyword.ids, vector.ids);
         assertTrue(Files.exists(tempDir.resolve("index/manifest.json")));
         assertTrue(service.isReady());
@@ -41,7 +41,7 @@ class KnowledgeIngestionServiceTest {
 
         assertThrows(IllegalStateException.class, service::rebuild);
         assertFalse(service.isReady());
-        assertFalse(service.status().ready());
+        assertFalse(service.status().isReady());
     }
 
     @Test
@@ -68,11 +68,11 @@ class KnowledgeIngestionServiceTest {
         FakeWritableVector vector = new FakeWritableVector();
         KnowledgeIngestionService service = service(knowledge, keyword, vector);
         byte[] content = "新增产品说明".getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        assertTrue(service.upload("one.md", content).ready());
-        assertEquals(2, service.status().chunkCount());
+        assertTrue(service.upload("one.md", content).isReady());
+        assertEquals(2, service.status().getChunkCount());
         assertEquals("原有知识", Files.readString(knowledge.resolve("one.md")));
         assertEquals(keyword.ids, vector.ids);
-        assertEquals(3, service.upload("one.md", content).chunkCount());
+        assertEquals(3, service.upload("one.md", content).getChunkCount());
     }
 
     @Test
@@ -88,7 +88,7 @@ class KnowledgeIngestionServiceTest {
         assertThrows(IllegalArgumentException.class, () -> service.upload("a.txt", new byte[]{(byte) 0xff}));
         assertThrows(IllegalArgumentException.class, () -> service.upload("a.txt", new byte[5 * 1024 * 1024 + 1]));
         assertTrue(service.isReady());
-        assertEquals(1, service.status().chunkCount());
+        assertEquals(1, service.status().getChunkCount());
         assertFalse(Files.exists(knowledge.resolve("uploads")));
     }
 
@@ -101,7 +101,7 @@ class KnowledgeIngestionServiceTest {
         assertThrows(IllegalStateException.class, () -> service.upload("new.txt", "新增知识".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
         assertFalse(service.isReady());
         vector.failUpsert = false;
-        assertEquals(1, service.rebuild().chunkCount());
+        assertEquals(1, service.rebuild().getChunkCount());
         assertTrue(service.isReady());
     }
 
@@ -113,7 +113,7 @@ class KnowledgeIngestionServiceTest {
     private static final class FakeWritableKeyword implements WritableKeywordIndex {
         Set<String> ids = new LinkedHashSet<>(); long count;
         public void reset() { ids.clear(); count = 0; }
-        public void upsert(List<KnowledgeChunk> chunks) { chunks.forEach(c -> ids.add(c.chunkId())); count = ids.size(); }
+        public void upsert(List<KnowledgeChunk> chunks) { chunks.forEach(c -> ids.add(c.getChunkId())); count = ids.size(); }
         public List<SearchHit> search(String query, int topK) { return List.of(); }
         public long count() { return count; }
     }
@@ -123,7 +123,7 @@ class KnowledgeIngestionServiceTest {
         public void reset(int dimension) { ids.clear(); count = 0; }
         public void upsert(List<KnowledgeChunk> chunks, List<float[]> vectors) {
             if (failUpsert) throw new IllegalStateException("Milvus unavailable");
-            chunks.forEach(c -> ids.add(c.chunkId())); count = ids.size();
+            chunks.forEach(c -> ids.add(c.getChunkId())); count = ids.size();
         }
         public void publish() {}
         public List<SearchHit> search(float[] vector, int topK) { return List.of(); }

@@ -16,7 +16,7 @@ public class BusinessTools {
         if (sku == null || !sku.matches("[A-Za-z0-9-]{1,40}")) throw new IllegalArgumentException("SKU 格式不正确");
         String source = baseUrl + "/demo/business/products/" + sku;
         try {
-            var response = client.send(HttpRequest.newBuilder(URI.create(source)).timeout(Duration.ofSeconds(20)).GET().build(), HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = client.send(HttpRequest.newBuilder(URI.create(source)).timeout(Duration.ofSeconds(20)).GET().build(), HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200) throw new IllegalStateException("业务接口 HTTP " + response.statusCode() + "，商品可能不存在");
             return Map.of("data", mapper.readTree(response.body()), "source", source);
         } catch (InterruptedException ex) { Thread.currentThread().interrupt(); throw new IllegalStateException("业务请求已取消"); }

@@ -7,17 +7,38 @@ import org.springframework.context.annotation.*;
 /** 在这里组装 RAG 组件，业务类本身不依赖 Spring，方便独立阅读和测试。 */
 @Configuration @Profile("app")
 public class RagConfiguration {
-    @Bean DocumentChunker chunker(DemoProperties p) { return new DocumentChunker(p.rag().knowledgeDir(), p.rag().chunkSize(), p.rag().overlap()); }
-    @Bean(destroyMethod = "close") LuceneKeywordIndex keywordIndex(DemoProperties p) { return new LuceneKeywordIndex(p.rag().indexDir()); }
-    @Bean(destroyMethod = "close") MilvusChunkStore vectorStore(DemoProperties p) { return new MilvusChunkStore(p.milvus().uri(), p.milvus().token(), p.milvus().collection()); }
-    @Bean KnowledgeIngestionService ingestion(DocumentChunker chunker, LuceneKeywordIndex keywordIndex,
-                                              MilvusChunkStore vectorStore, EmbeddingClient embedding, DemoProperties p) {
-        return new KnowledgeIngestionService(chunker, keywordIndex, vectorStore, embedding,
-                p.rag().knowledgeDir(), p.rag().indexDir(), p.bailian().dimension());
+    @Bean
+    DocumentChunker chunker(DemoProperties properties) {
+        return new DocumentChunker(properties.getRag().getKnowledgeDir(), properties.getRag().getChunkSize(),
+                properties.getRag().getOverlap());
     }
-    @Bean HybridRetriever retriever(LuceneKeywordIndex keywordIndex, MilvusChunkStore vectorStore,
-                                    EmbeddingClient embedding, RerankClient rerank, KnowledgeIngestionService readiness, DemoProperties p) {
+
+    @Bean(destroyMethod = "close")
+    LuceneKeywordIndex keywordIndex(DemoProperties properties) {
+        return new LuceneKeywordIndex(properties.getRag().getIndexDir());
+    }
+
+    @Bean(destroyMethod = "close")
+    MilvusChunkStore vectorStore(DemoProperties properties) {
+        return new MilvusChunkStore(properties.getMilvus().getUri(), properties.getMilvus().getToken(),
+                properties.getMilvus().getCollection());
+    }
+
+    @Bean
+    KnowledgeIngestionService ingestion(DocumentChunker chunker, LuceneKeywordIndex keywordIndex,
+                                        MilvusChunkStore vectorStore, EmbeddingClient embedding,
+                                        DemoProperties properties) {
+        return new KnowledgeIngestionService(chunker, keywordIndex, vectorStore, embedding,
+                properties.getRag().getKnowledgeDir(), properties.getRag().getIndexDir(),
+                properties.getBailian().getDimension());
+    }
+
+    @Bean
+    HybridRetriever retriever(LuceneKeywordIndex keywordIndex, MilvusChunkStore vectorStore,
+                              EmbeddingClient embedding, RerankClient rerank,
+                              KnowledgeIngestionService readiness, DemoProperties properties) {
         return new HybridRetriever(keywordIndex, vectorStore, embedding, rerank, readiness,
-                p.rag().recallTopK(), p.rag().finalTopK(), p.rag().minRerankScore());
+                properties.getRag().getRecallTopK(), properties.getRag().getFinalTopK(),
+                properties.getRag().getMinRerankScore());
     }
 }
