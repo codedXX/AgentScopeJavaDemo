@@ -1,6 +1,8 @@
 server:
   port: 8080
 spring:
+  config:
+    import: optional:file:.env[.properties]
   datasource:
     url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/sales_agent}
     username: ${POSTGRES_USER:sales_agent}

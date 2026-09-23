@@ -7,7 +7,7 @@ server:
   address: 127.0.0.1
 demo:
   bailian:
-    api-key: sk-ws-H.PHPPRYP.LbX3.MEYCIQDIz-wrCcL4dQUTaV-L3TSXK2Dld6oqLJn5SO8QKWfRKAIhANQIGIFNNXJZnRqUUkYNEonmfJRLZvhkg17LY8cvkLeu
+    api-key: ${DASHSCOPE_API_KEY:}
     base-url: ${DASHSCOPE_BASE_URL:https://dashscope.aliyuncs.com/api/v1}
     chat-model: qwen3.7-flash
     embedding-model: qwen3.7-text-embedding

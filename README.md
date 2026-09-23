@@ -60,10 +60,10 @@ $env:POSTGRES_PASSWORD = "与启动 Compose 时相同的密码"
 java -jar target/sales-agent-demo-1.0.0.jar --spring.profiles.active=app
 ```
 
-`.env.example` 是变量说明，Spring Boot 不会自动读取 `.env`。不要把真实 Key 写进 YAML 或提交仓库。
+`app` profile 从项目根目录启动时会读取本地 `.env`（可复制 `.env.example` 填写）；系统环境变量优先于 `.env`。不要把真实 Key 写进 YAML 或提交仓库。
 也可以使用 `mvn spring-boot:run "-Dspring-boot.run.profiles=app"` 和 `mcp-server` 两个 profile 启动。
 
-如果从 IntelliJ IDEA 的 Run/Debug Configuration 启动 `app` profile，请在该配置的 **Environment variables** 中设置 `POSTGRES_PASSWORD`（与首次创建 PostgreSQL 容器时使用的密码一致）和 `DASHSCOPE_API_KEY`。IDEA 不会自动继承另一个 PowerShell 窗口里设置的 `$env:POSTGRES_PASSWORD`。若启动日志出现 `The server requested SCRAM-based authentication, but no password was provided`，先检查这项配置；已有 `postgres-data` 卷时，修改 Compose 环境变量不会更改数据库里已有的密码。
+如果从 IntelliJ IDEA 的 Run/Debug Configuration 启动 `app` profile，请将 Working directory 设为项目根目录，以读取本地 `.env`；也可以在该配置的 **Environment variables** 中设置 `POSTGRES_PASSWORD` 和 `DASHSCOPE_API_KEY`。IDEA 不会自动继承另一个 PowerShell 窗口里设置的变量；如果显式设置了 `POSTGRES_PASSWORD`，它会覆盖 `.env` 中的值。已有 `postgres-data` 卷时，修改 Compose 环境变量不会更改数据库里已有的密码。
 
 终端三导入知识：
 
