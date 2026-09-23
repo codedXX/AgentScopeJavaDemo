@@ -51,6 +51,7 @@ class SalesAssistantTest {
         return assistant;
     }
 
+    /** MCP 不可用时仍能根据知识回答，会话历史互不混淆。 */
     @SuppressWarnings("unchecked")
     @Test void answersFromRagWhenMcpIsDownAndIsolatesHistory() throws Exception {
         ObjectMapper mapper = new ObjectMapper();
@@ -101,6 +102,7 @@ class SalesAssistantTest {
             assertEquals(2, history.turns("one").size());
         } finally { assistant.close(); server.stop(0); }
     }
+    /** 仓库工具注册在真正执行问答的 Agent 上。 */
     @SuppressWarnings("unchecked")
     @Test void repositoryToolsAreRegisteredOnTheExecutingAgent() throws Exception {
         ObjectMapper mapper = new ObjectMapper();

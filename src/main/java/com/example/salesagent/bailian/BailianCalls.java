@@ -20,6 +20,7 @@ final class BailianCalls {
             catch (Exception ex) { throw new IllegalStateException("百炼调用失败，请检查配置和连接", ex); }
         }
     }
+    /** 启动调用前检查是否配置了密钥。 */
     static void requireKey(String key) {
         if (key == null || key.isBlank()) throw new IllegalStateException("请先配置 DASHSCOPE_API_KEY");
     }

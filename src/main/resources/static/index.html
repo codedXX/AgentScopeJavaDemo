@@ -6,8 +6,10 @@
   <script src="/app.js?v=chat-history-1" defer></script>
 </head>
 <body>
+<!-- 页面分为知识库操作、历史会话和聊天三个区域。 -->
 <header><a class="brand" href="/" aria-label="知答首页"><span class="brand-mark">知</span>知答 <small>销售知识工作台</small></a><span class="header-note">让每个答案，有据可循</span></header>
 <main>
+  <!-- 左侧显示索引状态，支持上传资料和重建。 -->
   <aside>
     <div class="section-label">KNOWLEDGE LIBRARY</div><h1>把资料变成答案。</h1><p class="intro">导入产品资料与业务文档，围绕你的知识库展开对话。</p>
     <section class="library-card" aria-labelledby="library-title">
@@ -25,11 +27,13 @@
     <p class="fine-print">上传后将重新索引全部资料，期间知识检索暂不可用。同名文件会独立保存。</p>
     <button id="rebuild" class="secondary full" type="button">重建知识库 / 失败后重试</button>
   </aside>
+  <!-- 中间列出已保存的会话，点击后加载完整问答。 -->
   <nav class="history-panel" aria-label="历史会话">
     <div class="history-heading"><div class="section-label">PAST CONVERSATIONS</div><h2>历史会话</h2></div>
     <p id="history-feedback" class="feedback" role="status"></p>
     <div id="session-list" class="session-list"><p class="history-empty">正在读取会话…</p></div>
   </nav>
+  <!-- 右侧显示对话内容和提问输入框。 -->
   <section class="chat-panel" aria-labelledby="chat-title">
     <div class="chat-header"><div><div class="section-label">ASK YOUR KNOWLEDGE</div><h2 id="chat-title">知识问答</h2></div><button id="new-chat" class="secondary" type="button">＋ 新对话</button></div>
     <div id="messages" class="messages" role="log" aria-live="polite" aria-relevant="additions text">

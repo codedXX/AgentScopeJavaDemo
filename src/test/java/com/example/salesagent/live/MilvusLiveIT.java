@@ -8,8 +8,9 @@ import java.util.*;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
-
+/** 连接真实 Milvus，检查写入、搜索和重建。 */
 class MilvusLiveIT {
+    /** 真实向量库能写入、搜索并重建测试集合。 */
     @Test void persistsSearchesAndRebuildsRealCollection() {
         String uri = System.getenv("MILVUS_URI");
         assumeTrue(uri != null && !uri.isBlank(), "未设置 MILVUS_URI，跳过真实 Milvus 测试");

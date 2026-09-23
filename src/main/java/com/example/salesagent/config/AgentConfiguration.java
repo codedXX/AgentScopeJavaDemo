@@ -5,6 +5,7 @@ import io.agentscope.core.tool.mcp.*;
 import java.time.Duration;
 import org.springframework.context.annotation.*;
 
+/** 创建问答模型和 MCP 客户端，供销售助手使用。 */
 @Configuration @Profile("app")
 public class AgentConfiguration {
     @Bean @Lazy public DashScopeChatModel chatModel(DemoProperties p) {

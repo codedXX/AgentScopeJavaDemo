@@ -12,6 +12,7 @@ import java.util.*;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+/** 调用百炼重排模型，按问题相关程度重新排列候选片段。 */
 @Component @Profile("app")
 public class BailianRerankClient implements RerankClient {
     private final BailianProperties config;
@@ -25,6 +26,7 @@ public class BailianRerankClient implements RerankClient {
         api = new TextReRank("http", config.getBaseUrl(), ConnectionOptions.builder()
                 .connectTimeout(timeout).readTimeout(timeout).writeTimeout(timeout).build());
     }
+    /** 把候选片段交给重排模型，取前几条。 */
     @Override public List<SearchHit> rank(String query, List<KnowledgeChunk> chunks, int topK) {
         if (chunks.isEmpty()) return List.of();
         BailianCalls.requireKey(config.getApiKey());

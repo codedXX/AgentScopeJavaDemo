@@ -7,23 +7,27 @@ import org.springframework.context.annotation.*;
 /** 在这里组装 RAG 组件，业务类本身不依赖 Spring，方便独立阅读和测试。 */
 @Configuration @Profile("app")
 public class RagConfiguration {
+    /** 创建文档分块器。 */
     @Bean
     DocumentChunker chunker(DemoProperties properties) {
         return new DocumentChunker(properties.getRag().getKnowledgeDir(), properties.getRag().getChunkSize(),
                 properties.getRag().getOverlap());
     }
 
+    /** 创建关键词索引。 */
     @Bean(destroyMethod = "close")
     LuceneKeywordIndex keywordIndex(DemoProperties properties) {
         return new LuceneKeywordIndex(properties.getRag().getIndexDir());
     }
 
+    /** 创建 Milvus 向量索引。 */
     @Bean(destroyMethod = "close")
     MilvusChunkStore vectorStore(DemoProperties properties) {
         return new MilvusChunkStore(properties.getMilvus().getUri(), properties.getMilvus().getToken(),
                 properties.getMilvus().getCollection());
     }
 
+    /** 组装知识入库服务。 */
     @Bean
     KnowledgeIngestionService ingestion(DocumentChunker chunker, LuceneKeywordIndex keywordIndex,
                                         MilvusChunkStore vectorStore, EmbeddingClient embedding,
@@ -33,6 +37,7 @@ public class RagConfiguration {
                 properties.getBailian().getDimension());
     }
 
+    /** 组装混合检索服务。 */
     @Bean
     HybridRetriever retriever(LuceneKeywordIndex keywordIndex, MilvusChunkStore vectorStore,
                               EmbeddingClient embedding, RerankClient rerank,

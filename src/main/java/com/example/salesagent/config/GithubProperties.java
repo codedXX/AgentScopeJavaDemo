@@ -2,6 +2,7 @@ package com.example.salesagent.config;
 
 import java.util.Objects;
 
+/** 访问固定 GitHub 仓库所需的接口地址和令牌。 */
 public class GithubProperties {
     private String apiUrl;
     private String token;

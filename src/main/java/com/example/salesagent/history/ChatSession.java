@@ -3,6 +3,7 @@ package com.example.salesagent.history;
 import java.time.Instant;
 import java.util.Objects;
 
+/** 一段对话的编号、标题和创建、更新时间。 */
 public class ChatSession {
     private String id;
     private String title;

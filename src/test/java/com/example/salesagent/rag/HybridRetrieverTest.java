@@ -7,12 +7,13 @@ import com.example.salesagent.bailian.RerankClient;
 import com.example.salesagent.model.*;
 import java.util.*;
 import org.junit.jupiter.api.Test;
-
+/** 验证两路召回合并、重排和证据不足的判断。 */
 class HybridRetrieverTest {
     private static KnowledgeChunk chunk(String id) {
         return new KnowledgeChunk(id, "内容-" + id, "source-" + id + ".md", 0);
     }
 
+    /** 按片段编号去重后重排，不直接比较两路原始分数。 */
     @Test
     void mergesByChunkIdBeforeRerankingWithoutComparingChannelScores() {
         KnowledgeChunk a = chunk("A"); KnowledgeChunk b = chunk("B"); KnowledgeChunk c = chunk("C"); KnowledgeChunk d = chunk("D");
@@ -35,6 +36,7 @@ class HybridRetrieverTest {
         assertFalse(result.isInsufficient());
     }
 
+    /** 没有候选片段时跳过重排并标记证据不足。 */
     @Test
     void emptyCandidatesSkipRerankerAndReturnInsufficient() {
         RerankClient reranker = (query, chunks, topK) -> { throw new AssertionError("空候选不应调用重排序"); };
@@ -47,6 +49,7 @@ class HybridRetrieverTest {
         assertTrue(result.getEvidence().isEmpty());
     }
 
+    /** 知识库未就绪时拒绝检索。 */
     @Test
     void disabledKnowledgeBaseRejectsRetrieval() {
         HybridRetriever retriever = new HybridRetriever((q, k) -> List.of(), (v, k) -> List.of(),
@@ -55,6 +58,7 @@ class HybridRetrieverTest {
         assertThrows(KnowledgeNotReadyException.class, () -> retriever.retrieve("问题"));
     }
 
+    /** 低于配置分数线的证据会被标记为不足。 */
     @Test
     void configuredThresholdMarksLowScoredEvidenceInsufficient() {
         KnowledgeChunk a = chunk("A");

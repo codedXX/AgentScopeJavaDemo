@@ -3,6 +3,7 @@ package com.example.salesagent.rag;
 import java.time.Instant;
 import java.util.Objects;
 
+/** 知识库当前是否可用、片段数和最近一次重建信息。 */
 public class RebuildStatus {
     private boolean ready;
     private long chunkCount;

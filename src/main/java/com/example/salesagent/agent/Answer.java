@@ -3,6 +3,7 @@ package com.example.salesagent.agent;
 import java.util.List;
 import java.util.Objects;
 
+/** 模型给出的回答正文和它声称使用的资料来源。 */
 public class Answer {
     private String answer;
     private List<String> sources;

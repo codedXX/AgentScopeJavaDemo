@@ -9,8 +9,9 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
+/** 验证上传接口的成功响应和错误提示。 */
 class KnowledgeControllerTest {
+    /** 文件上传成功后返回索引状态。 */
     @Test
     void multipartUploadReturnsIndexedStatus() throws Exception {
         KnowledgeIngestionService ingestion = mock(KnowledgeIngestionService.class);
@@ -25,6 +26,7 @@ class KnowledgeControllerTest {
         mvc.perform(multipart("/api/knowledge/upload")).andExpect(status().isBadRequest());
     }
 
+    /** 无效文件返回易读的错误信息。 */
     @Test
     void invalidFileReturnsReadableError() throws Exception {
         KnowledgeIngestionService ingestion = mock(KnowledgeIngestionService.class);

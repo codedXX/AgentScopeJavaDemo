@@ -1,10 +1,12 @@
 'use strict';
+// 页面只负责展示和调用后端；当前会话编号保存在浏览器本地。
 const $ = id => document.getElementById(id);
 let sessionId = localStorage.getItem('active-session');
 let sending = false;
 let indexing = false;
 let loadingSession = true;
 async function request(url, options = {}) {
+  // 所有接口统一在这里处理失败提示和 JSON 响应。
   const response = await fetch(url, options);
   const data = await response.json().catch(() => null);
   if (!response.ok) throw new Error(data?.error || `请求失败（${response.status}），请检查服务后重试`);
@@ -12,10 +14,12 @@ async function request(url, options = {}) {
   return data;
 }
 function feedback(id, text, error = false) {
+  // 在指定位置显示普通提示或错误提示。
   $(id).textContent = text;
   $(id).classList.toggle('error', error);
 }
 async function refresh() {
+  // 刷新知识库状态和片段数量。
   try {
     const data = await request('/api/knowledge/status');
     $('status').textContent = data.ready ? '已就绪' : '未就绪';
@@ -30,6 +34,7 @@ async function refresh() {
   }
 }
 function controls() {
+  // 请求进行中禁用会冲突的按钮，避免重复提交。
   $('send').disabled = sending || indexing || loadingSession;
   $('new-chat').disabled = sending || loadingSession;
   $('upload').disabled = indexing || sending;
@@ -38,6 +43,7 @@ function controls() {
   document.querySelectorAll('.session-item').forEach(button => { button.disabled = sending || indexing || loadingSession; });
 }
 function validateFile(file) {
+  // 上传前先检查文件类型和大小。
   if (!file) throw new Error('请先选择文件');
   if (!/\.(txt|md)$/i.test(file.name)) throw new Error('目前支持 TXT 和 Markdown 文件');
   if (file.size === 0 || file.size > 5 * 1024 * 1024) throw new Error('请选择非空且不超过 5 MB 的文件');
@@ -46,6 +52,7 @@ $('file').addEventListener('change', () => {
   const file = $('file').files[0];
   $('selected-file').textContent = file ? `${file.name} · ${(file.size / 1024).toFixed(1)} KB` : '尚未选择文件';
 });
+// 拖入文件时显示选中状态，放下后交给同一套上传校验。
 for (const event of ['dragenter', 'dragover']) $('drop-zone').addEventListener(event, e => {
   e.preventDefault(); if (!indexing) $('drop-zone').classList.add('dragging');
 });
@@ -63,6 +70,7 @@ $('drop-zone').addEventListener('drop', e => {
   } catch (error) { feedback('upload-feedback', error.message, true); }
 });
 async function indexKnowledge(file) {
+  // 有文件就上传并入库；没有文件就用已有资料重建。
   if (indexing || sending) return;
   indexing = true; controls();
   feedback('upload-feedback', '正在处理资料并写入知识库，请保持页面打开…');
@@ -85,6 +93,7 @@ $('upload-form').addEventListener('submit', e => {
 $('rebuild').addEventListener('click', () => indexKnowledge());
 $('refresh').addEventListener('click', refresh);
 function addMessage(role, text) {
+  // 用纯文本插入消息，避免把回答当作 HTML 执行。
   $('welcome').hidden = true;
   const article = document.createElement('article'); article.className = `message ${role}`;
   const label = document.createElement('div'); label.className = 'message-label'; label.textContent = role === 'user' ? '你' : '知答 · 助手';
@@ -93,6 +102,7 @@ function addMessage(role, text) {
 }
 function scrollMessages() { $('messages').scrollTop = $('messages').scrollHeight; }
 function addDetails(article, title, items) {
+  // 把来源和处理步骤放进可展开的列表。
   if (!items?.length) return;
   const details = document.createElement('details');
   const summary = document.createElement('summary'); summary.textContent = `${title}（${items.length}）`;
@@ -101,6 +111,7 @@ function addDetails(article, title, items) {
   details.append(summary, list); article.append(details);
 }
 function showAnswer(article, data) {
+  // 用后端返回的正文、来源和耗时替换等待提示。
   article.querySelector('.message-body').textContent = data.answer;
   addDetails(article, '引用来源', data.sources);
   addDetails(article, '处理步骤', data.steps);
@@ -109,10 +120,12 @@ function showAnswer(article, data) {
   article.append(timing);
 }
 function clearMessages() {
+  // 清空当前聊天区域并重新显示欢迎语。
   document.querySelectorAll('.message').forEach(node => node.remove());
   $('welcome').hidden = false;
 }
 function highlightSession() {
+  // 标记当前正在查看的历史会话。
   document.querySelectorAll('.session-item').forEach(button => {
     button.setAttribute('aria-current', String(button.dataset.sessionId === sessionId));
   });
@@ -157,6 +170,7 @@ async function selectSession(id) {
   } finally { loadingSession = false; controls(); }
 }
 $('chat-form').addEventListener('submit', async e => {
+  // 发送问题；失败时恢复输入，方便直接重试。
   e.preventDefault();
   const message = $('question').value.trim();
   if (!message || sending || indexing || loadingSession) return;
@@ -183,6 +197,7 @@ $('question').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('chat-form').requestSubmit(); }
 });
 $('new-chat').addEventListener('click', () => {
+  // 新对话只清空当前页面，不删除数据库中的旧会话。
   sessionId = null;
   localStorage.removeItem('active-session'); clearMessages(); highlightSession();
   $('question').value = ''; feedback('chat-feedback', ''); $('question').focus();
@@ -191,6 +206,7 @@ document.querySelectorAll('.suggestions button').forEach(button => button.addEve
   $('question').value = button.textContent; $('question').focus();
 }));
 void refresh();
+// 页面打开时恢复上次查看的会话；找不到时回到新对话。
 void (async () => {
   try {
     const sessions = await refreshHistory();

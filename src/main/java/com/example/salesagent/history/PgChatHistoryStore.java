@@ -25,11 +25,13 @@ public class PgChatHistoryStore implements ChatHistoryStore {
     @Autowired private ChatTurnMapper turns;
     @Autowired private ObjectMapper json;
 
+    /** 按最近更新时间列出会话。 */
     @Override public List<ChatSession> listSessions() {
         return sessions.selectList(new QueryWrapper<ChatSessionRow>().orderByDesc("updated_at", "id"))
                 .stream().map(row -> new ChatSession(row.id, row.title, row.createdAt, row.updatedAt)).toList();
     }
 
+    /** 检查会话编号是否存在。 */
     @Override public boolean exists(String sessionId) {
         return sessions.selectById(sessionId) != null;
     }
@@ -81,16 +83,19 @@ public class PgChatHistoryStore implements ChatHistoryStore {
         sessions.updateById(session);
     }
 
+    /** 把数据库行还原成前端使用的问答对象。 */
     private ChatTurn map(ChatTurnRow row) {
         return new ChatTurn(row.id, row.sessionId, row.question, row.answer,
                 decode(row.sourcesJson), decode(row.stepsJson), row.retrievalMs, row.totalMs, row.createdAt);
     }
 
+    /** 把字符串列表存为 JSON。 */
     private String encode(List<String> value) {
         try { return json.writeValueAsString(value); }
         catch (JsonProcessingException e) { throw new IllegalStateException("聊天记录序列化失败", e); }
     }
 
+    /** 把数据库中的 JSON 还原为列表。 */
     private List<String> decode(String value) {
         try { return json.readValue(value, new TypeReference<List<String>>() {}); }
         catch (JsonProcessingException e) { throw new IllegalStateException("聊天记录内容损坏", e); }

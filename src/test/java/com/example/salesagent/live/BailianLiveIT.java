@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /** 仅由 -Plive-it 执行；会产生少量真实模型费用，不存在凭证时明确 skip。 */
 class BailianLiveIT {
+    /** 已配置的三个模型都能完成一次调用。 */
     @Test void probesAllThreeConfiguredModels() {
         String key = System.getenv("DASHSCOPE_API_KEY");
         assumeTrue(key != null && !key.isBlank(), "未配置 DASHSCOPE_API_KEY，未验证真实模型");

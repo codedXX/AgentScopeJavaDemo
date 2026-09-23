@@ -13,6 +13,7 @@ import java.util.*;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+/** 调用百炼模型，把文本转成供向量检索使用的数字数组。 */
 @Component @Profile("app")
 public class BailianEmbeddingClient implements EmbeddingClient {
     private final BailianProperties config;
@@ -31,6 +32,7 @@ public class BailianEmbeddingClient implements EmbeddingClient {
         api = new SynchronizeHalfDuplexApi<>(ConnectionOptions.builder().connectTimeout(timeout)
                 .readTimeout(timeout).writeTimeout(timeout).build(), service);
     }
+    /** 分批请求向量，最后按原文顺序合并。 */
     @Override public List<float[]> embed(List<String> texts) {
         if (texts.isEmpty()) return List.of();
         BailianCalls.requireKey(config.getApiKey());

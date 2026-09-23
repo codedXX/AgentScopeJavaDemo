@@ -3,6 +3,7 @@ package com.example.salesagent.model;
 import java.util.List;
 import java.util.Objects;
 
+/** 返回给前端的回答、来源、处理步骤和耗时。 */
 public class ChatResponse {
     private String sessionId;
     private String answer;

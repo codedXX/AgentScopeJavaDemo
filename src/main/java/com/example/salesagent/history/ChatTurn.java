@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 
+/** 一轮完整问答，包含问题、回答、来源、步骤和耗时。 */
 public class ChatTurn {
     private long id;
     private String sessionId;

@@ -2,6 +2,7 @@ package com.example.salesagent.config;
 
 import java.util.Objects;
 
+/** Milvus 向量库的连接和集合配置。 */
 public class MilvusProperties {
     private String uri;
     private String token;

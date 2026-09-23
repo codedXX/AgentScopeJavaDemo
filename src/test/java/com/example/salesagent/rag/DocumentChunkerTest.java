@@ -8,10 +8,11 @@ import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-
+/** 验证文档分块、空文件和稳定的片段编号。 */
 class DocumentChunkerTest {
     @TempDir Path tempDir;
 
+    /** 长中文文档被分块，来源保持相对路径。 */
     @Test
     void longChineseDocumentIsSplitAndKeepsRelativeSource() throws Exception {
         Path nested = Files.createDirectories(tempDir.resolve("product"));
@@ -26,6 +27,7 @@ class DocumentChunkerTest {
         assertEquals(0, chunks.getFirst().getOrdinal());
     }
 
+    /** 空白文档不产生片段。 */
     @Test
     void blankDocumentProducesNoChunks() throws Exception {
         Path file = tempDir.resolve("blank.txt");
@@ -34,6 +36,7 @@ class DocumentChunkerTest {
         assertTrue(new DocumentChunker(tempDir, 100, 10).split(file).isEmpty());
     }
 
+    /** 同一内容的片段编号稳定，也会区分来源。 */
     @Test
     void chunkIdsAreStableButIncludeSource() throws Exception {
         Path first = tempDir.resolve("a.txt");

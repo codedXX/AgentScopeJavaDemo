@@ -38,6 +38,7 @@ public final class LuceneKeywordIndex implements WritableKeywordIndex, AutoClose
         catch (IOException e) { throw new IllegalStateException("打开 Lucene 索引失败", e); }
     }
 
+    /** 清空旧关键词索引。 */
     @Override public synchronized void reset() {
         try (IndexWriter writer = writer()) { writer.deleteAll(); writer.commit(); }
         catch (IOException e) { throw new IllegalStateException("清空 Lucene 索引失败", e); }
@@ -87,6 +88,7 @@ public final class LuceneKeywordIndex implements WritableKeywordIndex, AutoClose
         } catch (Exception e) { throw new IllegalStateException("查询 Lucene 索引失败", e); }
     }
 
+    /** 统计索引中的片段数。 */
     @Override public synchronized long count() {
         try {
             if (!DirectoryReader.indexExists(directory)) return 0;
@@ -94,12 +96,14 @@ public final class LuceneKeywordIndex implements WritableKeywordIndex, AutoClose
         } catch (IOException e) { throw new IllegalStateException("读取 Lucene 记录数失败", e); }
     }
 
+    /** 创建写入索引所需的 Lucene Writer。 */
     private IndexWriter writer() throws IOException {
         IndexWriterConfig config = new IndexWriterConfig(analyzer);
         config.setSimilarity(new BM25Similarity());
         return new IndexWriter(directory, config);
     }
 
+    /** 关闭索引和分词器。 */
     @Override public void close() {
         try { directory.close(); analyzer.close(); }
         catch (IOException e) { throw new IllegalStateException("关闭 Lucene 索引失败", e); }

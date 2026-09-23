@@ -3,6 +3,7 @@ package com.example.salesagent.config;
 import java.nio.file.Path;
 import java.util.Objects;
 
+/** 知识目录、分块大小和检索条数等配置。 */
 public class RagProperties {
     private Path knowledgeDir;
     private Path indexDir;

@@ -47,6 +47,7 @@ public final class MilvusChunkStore implements WritableVectorChunkStore, AutoClo
         this.clientFactory = clientFactory;
     }
 
+    /** 重建指定维度的向量集合。 */
     @Override public synchronized void reset(int dimension) {
         MilvusClientV2 c = client();
         if (c.hasCollection(HasCollectionReq.builder().collectionName(collection).build())) {
@@ -65,6 +66,7 @@ public final class MilvusChunkStore implements WritableVectorChunkStore, AutoClo
                 .indexParam(vectorIndex).enableDynamicField(false).build());
     }
 
+    /** 把片段及其向量一起写入 Milvus。 */
     @Override public synchronized void upsert(List<KnowledgeChunk> chunks, List<float[]> vectors) {
         if (chunks.size() != vectors.size()) throw new IllegalArgumentException("分块与向量数量不一致");
         if (chunks.isEmpty()) return;
@@ -113,6 +115,7 @@ public final class MilvusChunkStore implements WritableVectorChunkStore, AutoClo
         return List.copyOf(hits);
     }
 
+    /** 统计向量集合中的片段数。 */
     @Override public synchronized long count() {
         if (!client().hasCollection(HasCollectionReq.builder().collectionName(collection).build())) return 0;
         QueryResp response = client().query(QueryReq.builder().collectionName(collection).filter("")
@@ -123,12 +126,14 @@ public final class MilvusChunkStore implements WritableVectorChunkStore, AutoClo
         return Long.parseLong(String.valueOf(value));
     }
 
+    /** 按需创建并复用 Milvus 连接。 */
     private MilvusClientV2 client() {
         MilvusClientV2 current = client;
         if (current == null) client = current = clientFactory.get();
         return current;
     }
 
+    /** 关闭 Milvus 连接。 */
     @Override public synchronized void close() {
         if (client != null) client.close();
     }

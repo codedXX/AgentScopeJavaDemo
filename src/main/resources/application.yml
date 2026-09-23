@@ -1,3 +1,4 @@
+# 两种启动模式共用的模型、检索和外部服务配置。
 spring:
   application:
     name: sales-agent-demo
@@ -6,6 +7,7 @@ spring:
 server:
   address: 127.0.0.1
 demo:
+  # 百炼密钥从环境变量读取；下面是模型名称和调用超时。
   bailian:
     api-key: ${DASHSCOPE_API_KEY:}
     base-url: ${DASHSCOPE_BASE_URL:https://dashscope.aliyuncs.com/api/v1}
@@ -14,6 +16,7 @@ demo:
     rerank-model: qwen3.7-text-rerank
     dimension: 1024
     timeout-seconds: 20
+  # 文档切分大小、召回数量和本地索引目录。
   rag:
     knowledge-dir: ./knowledge
     index-dir: ./data/lucene
@@ -22,13 +25,16 @@ demo:
     recall-top-k: 10
     final-top-k: 5
     # 不设置 min-rerank-score：相关性分数不是正确率，需要标注样例校准。
+  # Milvus 保存知识片段的向量。
   milvus:
     uri: ${MILVUS_URI:http://localhost:19530}
     token: ${MILVUS_TOKEN:}
     collection: sales_knowledge
+  # MCP 服务给 Agent 提供仓库和业务查询工具。
   mcp:
     url: http://127.0.0.1:8081/mcp
     business-url: http://127.0.0.1:8081
+  # 固定仓库工具使用的 GitHub 接口与令牌。
   github:
     api-url: https://api.github.com
     token: ${GITHUB_TOKEN:}

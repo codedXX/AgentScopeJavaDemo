@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** 启动真实 HTTP MCP 服务，测试发现与调用，不需要百炼 Key 或 Docker。 */
 class McpIntegrationTest {
+    /** HTTP MCP 服务能发现并调用工具。 */
     @Test void discoversToolsOverStreamableHttp() throws Exception {
         // 业务工具通过 HTTP 回调同一个随机端口上的业务 Controller。
         int selectedPort;

@@ -1,13 +1,16 @@
+# 主应用：提供网页、聊天、知识库接口，并连接 PostgreSQL。
 server:
   port: 8080
 spring:
   config:
     import: optional:file:.env[.properties]
   datasource:
+    # 可用环境变量覆盖本地数据库连接。
     url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/sales_agent}
     username: ${POSTGRES_USER:sales_agent}
     password: ${POSTGRES_PASSWORD:change-me-local}
   servlet:
+    # 和后端上传校验保持一致，限制请求体大小。
     multipart:
       max-file-size: 5MB
       max-request-size: 6MB

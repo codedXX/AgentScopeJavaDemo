@@ -3,6 +3,7 @@ package com.example.salesagent.rag;
 import java.time.Instant;
 import java.util.Objects;
 
+/** 记录上次成功重建的片段数、时间和向量维度。 */
 public class IndexManifest {
     private long chunkCount;
     private Instant rebuiltAt;

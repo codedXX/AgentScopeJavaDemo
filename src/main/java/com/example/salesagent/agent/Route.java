@@ -2,6 +2,7 @@ package com.example.salesagent.agent;
 
 import java.util.Objects;
 
+/** 分类结果：问题属于哪一类，以及用于检索的完整问法。 */
 public class Route {
     private Intent intent;
     private String query;

@@ -8,10 +8,11 @@ import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-
+/** 验证中文关键词查找和索引清空。 */
 class LuceneKeywordIndexTest {
     @TempDir Path tempDir;
 
+    /** 中文关键词找到正确片段并保留来源。 */
     @Test
     void chineseTermsFindTheMatchingChunkAndPreserveMetadata() {
         try (LuceneKeywordIndex index = new LuceneKeywordIndex(tempDir)) {
@@ -28,6 +29,7 @@ class LuceneKeywordIndexTest {
         }
     }
 
+    /** 清空索引后旧资料不能再搜到。 */
     @Test
     void resetRemovesOldDocuments() {
         try (LuceneKeywordIndex index = new LuceneKeywordIndex(tempDir)) {

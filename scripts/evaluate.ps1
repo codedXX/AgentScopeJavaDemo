@@ -1,3 +1,4 @@
+# 逐条请求问答接口，把原始回答写入结果文件，供人工评估。
 param(
     [string]$BaseUrl = 'http://127.0.0.1:8080',
     [string]$CasesPath = "$PSScriptRoot/../evaluation/cases.jsonl",
@@ -6,6 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 # 此脚本会调用真实模型并产生费用；先按 README 启动服务并重建知识库。
 $results = @()
+# 每个样例使用新会话，避免前一个问题影响下一个结果。
 foreach ($line in Get-Content -LiteralPath $CasesPath -Encoding UTF8) {
     if ([string]::IsNullOrWhiteSpace($line)) { continue }
     $case = $line | ConvertFrom-Json

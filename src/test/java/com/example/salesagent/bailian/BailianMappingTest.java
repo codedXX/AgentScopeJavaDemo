@@ -6,19 +6,22 @@ import com.example.salesagent.model.KnowledgeChunk;
 import org.junit.jupiter.api.Test;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
-
+/** 验证百炼返回的数据能正确对应原始输入。 */
 class BailianMappingTest {
+    /** 向量结果即使乱序返回，也能放回原位置。 */
     @Test void embeddingRestoresInputOrder() {
         TextEmbeddingResultItem second = embedding(1, List.of(0.0, 1.0));
         TextEmbeddingResultItem first = embedding(0, List.of(1.0, 0.0));
         List<float[]> vectors = BailianEmbeddingClient.map(List.of(second, first), 2, 2);
         assertArrayEquals(new float[]{1, 0}, vectors.getFirst());
     }
+    /** 重复索引和错误维度会被拒绝。 */
     @Test void rejectsDuplicateOrIncorrectDimensions() {
         TextEmbeddingResultItem item = embedding(0, List.of(1.0, 0.0));
         assertThrows(IllegalStateException.class, () -> BailianEmbeddingClient.map(List.of(item, item), 2, 2));
         assertThrows(IllegalStateException.class, () -> BailianEmbeddingClient.map(List.of(item), 1, 3));
     }
+    /** 重排结果的序号能对应原始片段。 */
     @Test void rerankIndexMapsToOriginalChunk() {
         List<KnowledgeChunk> chunks = List.of(new KnowledgeChunk("A", "a", "a.md", 0), new KnowledgeChunk("B", "b", "b.md", 0));
         List<com.example.salesagent.model.SearchHit> results = BailianRerankClient.map(List.of(rank(1, .9), rank(0, .3)), chunks, 1);

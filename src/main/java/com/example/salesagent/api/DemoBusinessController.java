@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+/** 提供演示商品的模拟价格和库存，供 MCP 工具调用。 */
 @RestController @Profile("mcp-server")
 public class DemoBusinessController {
     @GetMapping("/demo/business/products/{sku}")

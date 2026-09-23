@@ -9,10 +9,11 @@ import java.nio.file.Path;
 import java.util.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-
+/** 验证知识库重建、上传、失败恢复和就绪状态。 */
 class KnowledgeIngestionServiceTest {
     @TempDir Path tempDir;
 
+    /** 重建成功后，两路索引和清单数量一致。 */
     @Test
     void successfulRebuildPublishesMatchingIndexesAndManifest() throws Exception {
         Path knowledge = Files.createDirectories(tempDir.resolve("knowledge"));
@@ -30,6 +31,7 @@ class KnowledgeIngestionServiceTest {
         assertTrue(service.isReady());
     }
 
+    /** 第二路索引失败后，知识库保持未就绪。 */
     @Test
     void failedSecondIndexLeavesServiceNotReady() throws Exception {
         Path knowledge = Files.createDirectories(tempDir.resolve("knowledge"));
@@ -44,6 +46,7 @@ class KnowledgeIngestionServiceTest {
         assertFalse(service.status().isReady());
     }
 
+    /** 启动时只有清单与两路索引一致才恢复就绪。 */
     @Test
     void startupRequiresManifestCountsToMatchBothIndexes() throws Exception {
         Path knowledge = Files.createDirectories(tempDir.resolve("knowledge"));
@@ -60,6 +63,7 @@ class KnowledgeIngestionServiceTest {
         assertFalse(service.isReady());
     }
 
+    /** 上传新资料不会覆盖旧文件，并会重建两路索引。 */
     @Test
     void uploadPreservesExistingFilesAndPublishesBothIndexes() throws Exception {
         Path knowledge = Files.createDirectories(tempDir.resolve("knowledge"));
@@ -75,6 +79,7 @@ class KnowledgeIngestionServiceTest {
         assertEquals(3, service.upload("one.md", content).getChunkCount());
     }
 
+    /** 无效文件不会破坏现有可用索引。 */
     @Test
     void invalidUploadDoesNotChangeReadyIndex() throws Exception {
         Path knowledge = Files.createDirectories(tempDir.resolve("knowledge"));
@@ -92,6 +97,7 @@ class KnowledgeIngestionServiceTest {
         assertFalse(Files.exists(knowledge.resolve("uploads")));
     }
 
+    /** 上传后若重建失败，可以直接重试。 */
     @Test
     void failedUploadCanBeRetriedWithoutReuploading() throws Exception {
         Path knowledge = tempDir.resolve("knowledge");

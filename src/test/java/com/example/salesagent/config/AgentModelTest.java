@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** 使用真实 AgentScope HTTP 适配器，防止 SDK 之间不同的 base URL 约定导致路径错误。 */
 class AgentModelTest {
+    /** 聊天请求中的 API 路径只出现一次 /api/v1。 */
     @Test void sendsChatToExactlyOneApiV1Prefix() throws Exception {
         AtomicReference<String> path = new AtomicReference<String>();
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);

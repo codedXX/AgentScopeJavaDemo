@@ -2,6 +2,7 @@ package com.example.salesagent.config;
 
 import java.util.Objects;
 
+/** MCP 服务及演示业务接口的地址。 */
 public class McpProperties {
     private String url;
     private String businessUrl;

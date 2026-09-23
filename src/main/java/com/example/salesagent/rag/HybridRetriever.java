@@ -35,6 +35,7 @@ public final class HybridRetriever {
         this.minRerankScore = minRerankScore;
     }
 
+    /** 检查知识库状态后执行混合检索。 */
     public RagResult retrieve(String query) {
         long started = System.nanoTime();
         return readiness.withReadLock(() -> retrieveLocked(query, started));

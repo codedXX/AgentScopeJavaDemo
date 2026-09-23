@@ -15,7 +15,9 @@ import org.springframework.web.bind.annotation.*;
 public class ChatController {
     @Autowired private SalesAssistant assistant;
     @Autowired private ChatHistoryStore history;
+    /** 接收问题并返回本轮回答。 */
     @PostMapping("/api/chat") public ChatResponse chat(@RequestBody @Valid ChatRequest request) { return assistant.chat(request); }
+    /** 列出已保存的会话。 */
     @GetMapping("/api/sessions") public java.util.List<com.example.salesagent.history.ChatSession> sessions() {
         return history.listSessions();
     }

@@ -2,6 +2,7 @@ package com.example.salesagent.config;
 
 import java.util.Objects;
 
+/** 百炼模型的地址、密钥、模型名和超时配置。 */
 public class BailianProperties {
     private String apiKey;
     private String baseUrl;

@@ -1,3 +1,4 @@
+# MCP 服务单独占用 8081，不需要聊天历史数据库。
 server:
   port: 8081
 spring:

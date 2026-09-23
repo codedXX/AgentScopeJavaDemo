@@ -14,6 +14,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 import static org.junit.jupiter.api.Assertions.*;
+/** 用真实 PostgreSQL 验证历史记录的迁移和保存。 */
 
 @EnabledIfEnvironmentVariable(named = "CHAT_TEST_PG_URL", matches = ".+")
 @SpringBootTest(classes = PostgresChatHistoryTest.TestApp.class, properties = "spring.profiles.active=app")
@@ -31,6 +32,7 @@ class PostgresChatHistoryTest {
 
     @Autowired PgChatHistoryStore store;
 
+    /** 数据库迁移后可以保存完整问答。 */
     @Test void migratesPostgresAndPersistsCompleteTurn() {
         String id = java.util.UUID.randomUUID().toString();
         store.append(id, "PostgreSQL 问题", new ChatResponse(id, "持久化回答",

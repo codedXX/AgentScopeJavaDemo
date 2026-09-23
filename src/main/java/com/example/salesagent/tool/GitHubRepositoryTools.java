@@ -62,6 +62,7 @@ public class GitHubRepositoryTools {
         return Map.of("path", path, "commitSha", commitSha, "text", content.substring(0, end),
                 "truncated", end < content.length(), "source", WEB + "/blob/" + commitSha + "/" + encodedPath);
     }
+    /** 请求 GitHub API，并检查返回状态。 */
     private JsonNode get(String path) {
         try {
             HttpRequest.Builder request = HttpRequest.newBuilder(URI.create(apiUrl + path)).timeout(Duration.ofSeconds(20))
@@ -86,6 +87,7 @@ public class GitHubRepositoryTools {
         if (lower.contains(".env") || lower.contains("secret") || lower.contains("credential") || lower.contains("private") || lower.startsWith(".git/")) return false;
         return lower.matches(".*\\.(java|md|txt|xml|yml|yaml|properties|json|sql|gradle|kt|gitignore)$") || lower.equals("dockerfile");
     }
+    /** 把文件路径编码成安全的 URL 路径。 */
     private static String encode(String text) {
         return java.net.URLEncoder.encode(text, StandardCharsets.UTF_8).replace("+", "%20");
     }

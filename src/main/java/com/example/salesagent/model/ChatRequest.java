@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Size;
 
 import java.util.Objects;
 
+/** 前端发来的问题和可选会话编号。 */
 public class ChatRequest {
     @Pattern(regexp = "[A-Za-z0-9-]{1,64}")
     private String sessionId;

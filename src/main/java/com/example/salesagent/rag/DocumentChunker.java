@@ -30,6 +30,7 @@ public final class DocumentChunker {
         this.splitter = DocumentSplitters.recursive(chunkSize, overlap);
     }
 
+    /** 读取文件并切成带来源信息的片段。 */
     public List<KnowledgeChunk> split(Path file) {
         Path normalizedFile = file.toAbsolutePath().normalize();
         if (!normalizedFile.startsWith(knowledgeRoot)) {

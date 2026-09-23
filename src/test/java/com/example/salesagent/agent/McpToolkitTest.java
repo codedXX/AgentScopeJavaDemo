@@ -10,8 +10,9 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
-
+/** 验证仓库工具可以通过 Agent 的工具箱执行。 */
 class McpToolkitTest {
+    /** 工具箱能执行仓库工具。 */
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.NullAndEmptySource
     @org.junit.jupiter.params.provider.ValueSource(strings = {"{}", "null", "{\"repository\":\"codedXX/redis-cache-demo\"}"})

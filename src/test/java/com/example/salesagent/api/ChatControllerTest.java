@@ -13,8 +13,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
+/** 验证历史会话接口返回已保存的内容。 */
 class ChatControllerTest {
+    /** 接口能列出会话并读取保存的问答。 */
     @Test void listsSessionsAndLoadsSavedTurns() throws Exception {
         SalesAssistant assistant = mock(SalesAssistant.class);
         ChatHistoryStore history = mock(ChatHistoryStore.class);

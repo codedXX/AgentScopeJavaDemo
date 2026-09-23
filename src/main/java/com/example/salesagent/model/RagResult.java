@@ -3,6 +3,7 @@ package com.example.salesagent.model;
 import java.util.List;
 import java.util.Objects;
 
+/** 知识检索结果，以及证据是否足够和检索耗时。 */
 public class RagResult {
     private List<SearchHit> evidence;
     private boolean insufficient;

@@ -71,6 +71,7 @@ public final class KnowledgeIngestionService implements KnowledgeReadiness {
         return rebuildWithUpload(filename, content);
     }
 
+    /** 用知识目录中的所有文件重新建立两路索引。 */
     public RebuildStatus rebuild() {
         return rebuildWithUpload(null, null);
     }
@@ -120,6 +121,7 @@ public final class KnowledgeIngestionService implements KnowledgeReadiness {
         }
     }
 
+    /** 返回最近一次重建状态。 */
     public RebuildStatus status() { return state; }
     @Override public boolean isReady() { return state.isReady(); }
 
@@ -133,6 +135,7 @@ public final class KnowledgeIngestionService implements KnowledgeReadiness {
         finally { lock.readLock().unlock(); }
     }
 
+    /** 读取所有文本资料并切成片段。 */
     private List<KnowledgeChunk> readChunks() throws IOException {
         if (!Files.isDirectory(knowledgeDir)) throw new IllegalStateException("知识目录不存在: " + knowledgeDir);
         List<KnowledgeChunk> result = new ArrayList<>();
@@ -148,6 +151,7 @@ public final class KnowledgeIngestionService implements KnowledgeReadiness {
         return List.copyOf(result);
     }
 
+    /** 确认向量数量、维度和数值都正确。 */
     private void validateVectors(List<KnowledgeChunk> chunks, List<float[]> vectors) {
         if (vectors == null || vectors.size() != chunks.size()) throw new IllegalStateException("Embedding 返回数量与分块数不一致");
         for (float[] vector : vectors) {
@@ -156,6 +160,7 @@ public final class KnowledgeIngestionService implements KnowledgeReadiness {
         }
     }
 
+    /** 确认两路索引都写入了预期数量的片段。 */
     private void verifyCounts(long expected) {
         if (keywordIndex.count() != expected || vectorStore.count() != expected) {
             throw new IllegalStateException("两路索引记录数不一致");

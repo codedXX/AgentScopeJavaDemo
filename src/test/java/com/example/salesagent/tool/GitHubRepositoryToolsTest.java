@@ -7,8 +7,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
-
+/** 验证仓库工具按固定版本读取文件，并正确处理仓库不可用。 */
 class GitHubRepositoryToolsTest {
+    /** 读取指定提交里的文件，并保留可追溯的来源。 */
     @Test void readsFileAtExactCommitAndKeepsSource() throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/repos/codedXX/redis-cache-demo/contents/README.md", exchange -> {
@@ -28,6 +29,7 @@ class GitHubRepositoryToolsTest {
             assertThrows(IllegalArgumentException.class, () -> tools.readRepositoryFile("secret.pem", "a".repeat(40)));
         } finally { server.stop(0); }
     }
+    /** 仓库不可用时明确报错。 */
     @Test void propagatesUnavailableRepository() throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/", e -> { e.sendResponseHeaders(404, -1); e.close(); }); server.start();

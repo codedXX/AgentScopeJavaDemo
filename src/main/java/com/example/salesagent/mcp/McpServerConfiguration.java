@@ -18,6 +18,7 @@ import org.springframework.context.annotation.*;
  */
 @Configuration @Profile("mcp-server")
 public class McpServerConfiguration {
+    /** 创建 MCP 的 HTTP 传输层。 */
     @Bean public HttpServletStreamableServerTransportProvider mcpTransport() {
         return HttpServletStreamableServerTransportProvider.builder().jsonMapper(McpJsonMapper.getDefault()).mcpEndpoint("/mcp").build();
     }
@@ -43,12 +44,14 @@ public class McpServerConfiguration {
                         (exchange, request) -> result(() -> business.getProductStatus(arg(request, "sku")), mapper))
                 .build();
     }
+    /** 生成工具描述和参数格式。 */
     private static McpSchema.Tool tool(String name, String description, Map<String, String> fields) {
         Map<String, Object> properties = new LinkedHashMap<>();
         fields.forEach((key, label) -> properties.put(key, Map.of("type", "string", "description", label)));
         return McpSchema.Tool.builder().name(name).description(description)
                 .inputSchema(new McpSchema.JsonSchema("object", properties, new ArrayList<>(fields.keySet()), false, null, null)).build();
     }
+    /** 读取并检查工具调用参数。 */
     private static String arg(McpSchema.CallToolRequest request, String name) {
         Object value = request.arguments() == null ? null : request.arguments().get(name);
         if (!(value instanceof String)) throw new IllegalArgumentException("缺少工具参数 " + name);
@@ -56,6 +59,7 @@ public class McpServerConfiguration {
         if (text.isBlank()) throw new IllegalArgumentException("缺少工具参数 " + name);
         return text;
     }
+    /** 将工具结果或安全的错误信息转为 MCP 响应。 */
     private static McpSchema.CallToolResult result(Supplier<?> action, ObjectMapper mapper) {
         try {
             return McpSchema.CallToolResult.builder().addTextContent(mapper.writeValueAsString(action.get())).isError(false).build();
