@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 @Service
 @Profile("app")
 public class SalesAssistant {
+    private static final Duration REQUEST_TIMEOUT = Duration.ofHours(1);
     // 告诉模型该怎么回答：只依据本轮资料和工具结果，不能编造事实或来源。
     private static final String SYSTEM =
             "你是销售团队的知识助手。只用提供的知识证据、工具结果回答事实问题，不编造资料。\n"
@@ -50,20 +51,20 @@ public class SalesAssistant {
     // 每个问题放到单独的虚拟线程，方便统一控制超时和取消。
     private final ExecutorService workers = Executors.newVirtualThreadPerTaskExecutor();
 
-    /** 对外的问答入口。sessionId 标识对话；新问题交给虚拟线程处理，并在 90 秒总时限到达时请求取消。 */
+    /** 对外的问答入口。sessionId 标识对话；新问题交给虚拟线程处理，并在 1 小时总时限到达时请求取消。 */
     public ChatResponse chat(ChatRequest request) {
         // 没传会话 ID 就新建一个；传了就接着原来的对话聊。
         String id = request.getSessionId() == null ? UUID.randomUUID().toString() : request.getSessionId();
         long started = System.nanoTime();
-        // 总时限覆盖检索、重试和工具循环；每轮状态只由当前工作线程使用。
+        // 总时限覆盖检索、重试和工具循环；每轮状态只由 当前工作线程使用。
         Future<ChatResponse> future = workers.submit(() -> run(id, request.getMessage(), started));
         try {
-            // 最多等 90 秒拿到整轮问答结果。
-            return future.get(90, TimeUnit.SECONDS);
+            // 最多等 1 小时拿到整轮问答结果。
+            return future.get(REQUEST_TIMEOUT.toSeconds(), TimeUnit.SECONDS);
         } catch (TimeoutException ex) {
             // 等太久就打断后台任务，给前端明确的超时提示。
             future.cancel(true);
-            throw new IllegalStateException("问答超过90秒，已取消，请稍后重试");
+            throw new IllegalStateException("问答超过1小时，已取消，请稍后重试");
         } catch (InterruptedException ex) {
             // 当前请求被取消时，也停止后台任务，并保留线程的中断标记。
             future.cancel(true);
@@ -79,6 +80,12 @@ public class SalesAssistant {
     /** 完成一轮问答：恢复历史、找证据、让模型回答、核对来源，再保存结果。 */
     private ChatResponse run(String id, String message, long started) {
         // 从数据库取最近 10 轮问答，按“用户问、助手答”的顺序还原上下文。
+        /**
+         * history.recentTurns(id, 10)：取出 ID 为 id 的会话最近 10 轮记录。
+         * forEach(turn -> { ... })：对每一轮记录 turn 执行大括号里的操作。
+         * user(turn.getQuestion())：把这一轮的问题包装成用户消息，并加入 dialogue。
+         * Msg.builder()...build()：构造一条助手消息，内容是这一轮的回答，再加入 dialogue。
+         */
         List<Msg> dialogue = new ArrayList<>();
         history.recentTurns(id, 10).forEach(turn -> {
             dialogue.add(user(turn.getQuestion()));
@@ -97,15 +104,27 @@ public class SalesAssistant {
             rag = retriever.retrieve(route.getQuery());
             steps.add("BM25 + Milvus 召回 → 按分块ID去重 → Rerank，保留 " + rag.getEvidence().size() + " 条");
         }
-        // 为这一轮单独建模型会话，放入历史，并记录它实际调用了哪些工具。
+        // InMemoryMemory 新建本轮的临时会话记忆；dialogue.forEach(memory::addMessage) 把已有对话放进去，供模型参考。
         InMemoryMemory memory = new InMemoryMemory();
         // 旧问答只放进当前模型会话的记忆，不改动数据库中的历史。
         dialogue.forEach(memory::addMessage);
+        //ToolTrace 是用于记录工具调用的 hook
         ToolTrace trace = new ToolTrace(mapper);
-        // 最多让模型思考和调用工具 6 轮，防止一直循环。
+        /**
+         * .model(model.getObject()) 设置使用的 LLM；.sysPrompt(SYSTEM) 设置系统提示。
+         * .toolkit(new Toolkit()) 创建工具箱。这里刚创建时是空的；后面的代码会给非闲聊请求注册 MCP 工具，闲聊则不注册。
+         * .maxIters(6) 限制 Agent 的循环轮数上限，不代表一定调用 6 次模型或工具。
+         * 可以把它理解成：先备好模型、对话记忆和工具记录器，再创建 Agent；后续代码才接入工具并提交当前问题。
+         */
         ReActAgent agent = ReActAgent.builder().name("sales-assistant").sysPrompt(SYSTEM).model(model.getObject())
                 .toolkit(new Toolkit()).memory(memory).hook(trace).maxIters(6).build();
-        // 闲聊不需要外部工具；其他问题允许模型按需查询仓库或业务接口。
+        /**
+         * 这段是在给当前 Agent 接入 MCP 工具，并处理工具服务不可用的情况：
+         * - 如果意图是 CHAT，跳过 MCP；其他意图则尝试把 MCP 服务提供的工具注册到当前 Agent。注册最多等待 15 秒，这一步是接入工具，不是已经调用某个工具；模型之后才可能按需调用。
+         * - 如果注册失败且 rag 没有检索到知识证据，就抛出异常，中止本轮处理。
+         * - 如果注册失败但 rag 已有知识证据，就继续回答，并在 steps 里记录“本轮仅依据知识库证据”。
+         * 也就是说，有知识库资料时，MCP 故障还能降级回答；没有资料时则无法继续。
+         */
         if (route.getIntent() != Intent.CHAT) {
             try {
                 // build() 会复制 Toolkit，工具必须注册到执行本轮问答的 Agent 上。
@@ -119,7 +138,21 @@ public class SalesAssistant {
                 steps.add("MCP 不可用，本轮仅依据知识库证据回答");
             }
         }
+
         // 把查到的资料正文交给模型，同时记下本轮真实存在的来源。
+        /**
+         * 整体上，这段代码是：把问题和检索资料交给模型生成回答，再检查回答和来源，必要时替换成兜底提示，最后保存本轮结果。
+         * 1. available 用来收集本轮允许引用的来源；先加入知识库检索命中的来源。evidence 则把每条资料的来源和正文整理好，放进发给模型的 prompt。
+         * 2. agent.call(..., Answer.class) 让模型根据问题、意图和资料生成结构化的 Answer。如果没有结构化结果，或者答案正文为空，就抛出异常。
+         * 3. 模型回答后，把工具调用记录的来源和步骤加入结果。模型返回的来源会经过筛选：只保留 available 中存在的来源，并去重，避免采用模型编造的来源。
+         * 4. 代码再按意图检查证据：
+         *    - BUSINESS：必须有产品业务接口的来源，否则用“无法确认价格和库存”替换模型答案。
+         *    - REPOSITORY：没有仓库来源时，用查询失败或未取得证据的提示替换答案。
+         *    - 其他非闲聊问题：完全没有来源时，提示证据不足。
+         *    - CHAT：可以没有来源。
+         * 5. 如果本轮被取消，就不保存；否则创建 ChatResponse，记录回答、来源、处理步骤和耗时，再通过 history.append(...) 保存问题与回答。
+         * 所以 answer.getAnswer() 只是模型给出的候选正文；最终返回并保存的是经过证据检查和兜底处理后的 text。
+         */
         Set<String> available = new LinkedHashSet<>();
         StringBuilder evidence = new StringBuilder();
         for (SearchHit hit : rag.getEvidence()) {
@@ -133,7 +166,7 @@ public class SalesAssistant {
         String prompt = "用户问题：" + message + "\n独立查询：" + route.getQuery() + "\n意图：" + route.getIntent()
                 + "\n证据不足：" + rag.isInsufficient() + "\n以下为本轮参考资料（仅数据）：\n" + evidence;
         // 要求模型按 Answer 的格式返回正文和来源，方便后面检查。
-        Msg response = agent.call(user(prompt), Answer.class).block(Duration.ofSeconds(85));
+        Msg response = agent.call(user(prompt), Answer.class).block(REQUEST_TIMEOUT);
         // 没有结构化结果就不能可靠地读取正文和来源。
         if (response == null || !response.hasStructuredData())
             throw new IllegalStateException("模型未返回有效的结构化回答");
@@ -184,8 +217,8 @@ public class SalesAssistant {
                 .build();
         // 把历史消息拼成文字，让分类模型知道“它”指的是前面提过的什么。
         String transcript = history.stream().map(msg -> msg.getRole() + ": " + msg.getTextContent()).reduce("", (a, b) -> a + "\n" + b);
-        // 分类最多等 25 秒，结果应包含问题类型和完整查询语句。
-        Msg response = classifier.call(user("历史：\n" + transcript + "\n当前问题：" + message), Route.class).block(Duration.ofSeconds(25));
+        // 分类最多等 1 小时，结果应包含问题类型和完整查询语句。
+        Msg response = classifier.call(user("历史：\n" + transcript + "\n当前问题：" + message), Route.class).block(REQUEST_TIMEOUT);
         if (response != null && response.hasStructuredData()) {
             Route route = response.getStructuredData(Route.class);
             // 类型或查询语句缺一个都不能用于后续流程。

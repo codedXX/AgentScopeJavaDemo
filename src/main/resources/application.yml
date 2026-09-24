@@ -15,7 +15,7 @@ demo:
     embedding-model: qwen3.7-text-embedding
     rerank-model: qwen3.7-text-rerank
     dimension: 1024
-    timeout-seconds: 20
+    timeout-seconds: 3600
   # 文档切分大小、召回数量和本地索引目录。
   rag:
     knowledge-dir: ./knowledge
