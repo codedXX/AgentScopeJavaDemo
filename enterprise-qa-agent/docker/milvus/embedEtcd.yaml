@@ -1,0 +1,6 @@
+# 与 Milvus 官方单容器脚本中的 etcd 参数一致。
+listen-client-urls: http://0.0.0.0:2379
+advertise-client-urls: http://0.0.0.0:2379
+quota-backend-bytes: 4294967296
+auto-compaction-mode: revision
+auto-compaction-retention: '1000'

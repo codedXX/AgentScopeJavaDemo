@@ -1,15 +1,15 @@
 ### 知识库状态
 # GET 只读查询该接口；知识状态或已持久化会话不会在这里被修改。
-GET http://127.0.0.1:8180/api/knowledge/status
+GET http://127.0.0.1:8085/api/knowledge/status
 
 ### 导入知识
 # POST 调用该接口执行重建、问答、数据查询或检索；实际用途见上方请求标题。
-POST http://127.0.0.1:8180/api/knowledge/rebuild
+POST http://127.0.0.1:8085/api/knowledge/rebuild
 
 ### 多轮问答
 # POST 调用该接口执行重建、问答、数据查询或检索；实际用途见上方请求标题。
 # 字段说明：sessionId 固定可连续追问，message 是用户问题。
-POST http://127.0.0.1:8180/api/chat
+POST http://127.0.0.1:8085/api/chat
 # 后面的请求体按 JSON 读取，字段名需要与 Controller 中的 record 一致。
 Content-Type: application/json
 
@@ -18,7 +18,7 @@ Content-Type: application/json
 ### 追问
 # POST 调用该接口执行重建、问答、数据查询或检索；实际用途见上方请求标题。
 # 字段说明：sessionId 固定可连续追问，message 是用户问题。
-POST http://127.0.0.1:8180/api/chat
+POST http://127.0.0.1:8085/api/chat
 # 后面的请求体按 JSON 读取，字段名需要与 Controller 中的 record 一致。
 Content-Type: application/json
 
@@ -27,7 +27,7 @@ Content-Type: application/json
 ### Plan-and-Execute
 # POST 调用该接口执行重建、问答、数据查询或检索；实际用途见上方请求标题。
 # 字段说明：sessionId 固定可连续追问，message 是用户问题。
-POST http://127.0.0.1:8180/api/chat
+POST http://127.0.0.1:8085/api/chat
 # 后面的请求体按 JSON 读取，字段名需要与 Controller 中的 record 一致。
 Content-Type: application/json
 
@@ -36,7 +36,7 @@ Content-Type: application/json
 ### Text2SQL + Excel
 # POST 调用该接口执行重建、问答、数据查询或检索；实际用途见上方请求标题。
 # 字段说明：question 描述只读统计需求，export=true 生成可下载 XLSX。
-POST http://127.0.0.1:8180/api/sql/query
+POST http://127.0.0.1:8085/api/sql/query
 # 后面的请求体按 JSON 读取，字段名需要与 Controller 中的 record 一致。
 Content-Type: application/json
 
@@ -45,7 +45,7 @@ Content-Type: application/json
 ### 查看无缓存检索结果
 # POST 调用该接口执行重建、问答、数据查询或检索；实际用途见上方请求标题。
 # 字段说明：query 是独立检索问题，bypassCache=true 观察真实未缓存检索耗时。
-POST http://127.0.0.1:8180/api/retrieval
+POST http://127.0.0.1:8085/api/retrieval
 # 后面的请求体按 JSON 读取，字段名需要与 Controller 中的 record 一致。
 Content-Type: application/json
 
@@ -53,4 +53,4 @@ Content-Type: application/json
 
 ### 恢复会话
 # GET 只读查询该接口；知识状态或已持久化会话不会在这里被修改。
-GET http://127.0.0.1:8180/api/sessions/example-001
+GET http://127.0.0.1:8085/api/sessions/example-001

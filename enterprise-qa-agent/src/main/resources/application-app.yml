@@ -1,7 +1,7 @@
 # 问答 app profile 的 HTTP 设置。
 server:
-  # 问答页面、知识库、会话、检索及 SQL 接口监听 8180。
-  port: 8180
+  # 问答页面、知识库、会话、检索及 SQL 接口监听 8085。
+  port: 8085
 # app 模式下的 Spring Web 配置。
 spring:
   # Servlet 容器接收 HTTP 文件上传的设置。

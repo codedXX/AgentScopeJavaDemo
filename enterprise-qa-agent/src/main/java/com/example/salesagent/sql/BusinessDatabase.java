@@ -78,9 +78,14 @@ public class BusinessDatabase {
 
     // 为 Text2SQL 模型提供业务字段、关联关系和查询边界。
     public String schema() {
+        // 根据实际 JDBC URL 提供方言，避免 MySQL 收到 PostgreSQL 专用语法。
+        String dialect = url.startsWith("jdbc:mysql:") ? "只读MySQL兼容SQL。" : "只读H2/PostgreSQL兼容SQL。";
         // 列出允许查询的两张表及字段，避免模型猜测其他数据库对象。
-        return "只读H2/PostgreSQL兼容SQL。products(sku,name,category,price,stock)；sales(id,sku,region,quantity,amount,sold_at)。"
+        return dialect + "products(sku,name,category,price,stock)；sales(id,sku,region,quantity,amount,sold_at)。"
             // 明确 JOIN 关系、模拟数据属性、币种和 200 行结果上限。
-            + "products.sku=sales.sku。演示数据，金额人民币；仅允许SELECT，可筛选、JOIN、GROUP BY统计，最多200行。";
+            + "products.sku=sales.sku。price为单价，stock为当前库存，quantity为销量，amount为实际销售额，sold_at为销售日期。"
+            + "演示数据，金额人民币；仅允许SELECT，可筛选、JOIN、GROUP BY统计，最多200行。"
+            + "月份筛选使用日期范围，例如2026年9月使用sold_at >= '2026-09-01' AND sold_at < '2026-10-01'。"
+            + (url.startsWith("jdbc:mysql:") ? "按月汇总可使用DATE_FORMAT(sold_at,'%Y-%m')；也允许YEAR、MONTH、DAY、DATE。" : "");
     }
 }

@@ -18,7 +18,7 @@ public final class ReadOnlySqlValidator {
     // 只允许访问商品表和销售表，禁止系统表或任意外部表。
     private static final Set<String> TABLES = Set.of("products", "sales");
     // 只允许聚合和纯计算函数，避免读文件、写文件或调用数据库扩展函数。
-    private static final Set<String> FUNCTIONS = Set.of("count", "sum", "avg", "min", "max", "round", "abs", "coalesce", "lower", "upper", "length");
+    private static final Set<String> FUNCTIONS = Set.of("count", "sum", "avg", "min", "max", "round", "abs", "coalesce", "lower", "upper", "length", "date_format", "year", "month", "day", "date");
     // 私有构造器表明这是无实例状态的校验工具类。
     private ReadOnlySqlValidator() {}
 
@@ -45,7 +45,7 @@ public final class ReadOnlySqlValidator {
             // 从整棵语法树提取涉及的表名。
             var tables = new TablesNamesFinder().getTableList(statement);
             // 要求至少有业务表，并且每个表名都在允许集合中。
-            if (tables.isEmpty() || tables.stream().anyMatch(t -> !TABLES.contains(t.toLowerCase(Locale.ROOT))))
+            if (tables.isEmpty() || tables.stream().anyMatch(t -> !TABLES.contains(normalizeTableName(t))))
                 // 阻止访问 information_schema 等非业务对象。
                 throw new IllegalArgumentException("只能查询products、sales业务表");
             // 创建表达式访问器，检查 SELECT 各位置上的函数调用。
@@ -107,5 +107,12 @@ public final class ReadOnlySqlValidator {
             // 保留 cause，但向调用方提供固定的可读错误。
             throw new IllegalArgumentException("SQL解析失败", e);
         }
+    }
+
+    // MySQL 常用反引号包裹表名；只移除单层反引号，仍拒绝其他库的限定表名。
+    private static String normalizeTableName(String table) {
+        if (table.startsWith("`") && table.endsWith("`") && table.length() > 2)
+            table = table.substring(1, table.length() - 1);
+        return table.toLowerCase(Locale.ROOT);
     }
 }

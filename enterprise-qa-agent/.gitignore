@@ -6,6 +6,8 @@ target/
 .env
 # 本地模型配置可能包含真实 API Key，不提交到仓库。
 /application-local.yml
+# MySQL 管理员连接信息仅用于本地造数，不提交。
+/mysql-admin.properties
 # 忽略 IntelliJ IDEA 的本机项目配置。
 .idea/
 # 忽略 IDE 模块元数据。

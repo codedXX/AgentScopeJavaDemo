@@ -21,7 +21,7 @@
 
 ## 2. 启动（PowerShell）
 
-需要 JDK 21、Maven 3.9+、Docker Desktop 和有模型权限的百炼 API Key。进入本文件所在目录运行。
+需要 JDK 21、Maven 3.9+、Docker Desktop、本机 MySQL 8.0+ 和有模型权限的百炼 API Key。进入本文件所在目录运行。
 
 ```powershell
 mvn clean verify
@@ -30,6 +30,8 @@ docker compose up -d --wait
 ```
 
 本项目与原 Demo 的端口、collection、Docker 项目和数据目录相互独立。
+
+问答服务默认端口为 8085，MCP 服务为 8086，服务之间的调用地址已同步配置。本机此前因 Windows 动态端口范围设置导致端口被保留，已恢复动态范围到 49152–65535 并重启；8085、8086 的绑定检查已通过。
 
 默认 Milvus 采用官方单容器部署方式：内置 etcd 保存元数据，本地存储保存向量与索引，只需拉取 `milvusdb/milvus:v2.6.6`。配置文件位于 `docker/milvus`，数据持久化到 `enterprise-qa-agent_milvus-embedded-data` 命名卷。`docker compose ps` 显示 `standalone` 为 `healthy` 后即可启动问答服务。这适用于本机学习环境；不需要单独下载 MinIO。此卷不复用旧版外部 etcd / MinIO 部署的数据。
 
@@ -40,6 +42,30 @@ demo:
   bailian:
     api-key: "你的Key"
 ```
+
+### 初始化 MySQL 业务库
+
+默认连接本机 `127.0.0.1:3306`，数据库为 `enterprise_qa_demo`。首次运行先复制管理员配置，填写 MySQL 管理员密码，再执行初始化。管理员密码只供本地脚本使用，不交给问答服务；实际文件已加入 `.gitignore`。已有配置文件时直接编辑即可。
+
+```powershell
+Copy-Item mysql-admin.properties.example mysql-admin.properties
+notepad mysql-admin.properties
+# 填写 password= 后的密码，不加引号，保存后执行：
+./scripts/init-mysql-demo.ps1
+```
+
+脚本复用打包 JAR 中的 MySQL JDBC 驱动，不需要安装 MySQL 命令行客户端。建库和造数 SQL 位于 `scripts/mysql-demo.sql`：12 件商品、364 条模拟销售记录，覆盖 2026 年 4—9 月、6 个地区和营养/办公/数码/日用四类商品，初始销售总额为 396,382.00 元。重复导入会跳过已有主键，不清空或覆盖现有记录。
+
+应用使用 `enterprise_qa_reader` 只读账号，默认演示密码为 `local-reader-password`，只获两张业务表的 SELECT 权限。连接设置在 `src/main/resources/application.yml` 的 `enterprise.business-jdbc-url`、`business-user` 和 `business-password` 中；可以在项目根目录 `application-local.yml` 覆盖，直接写密码，无需设置环境变量：
+
+```yaml
+enterprise:
+  business-jdbc-url: "jdbc:mysql://127.0.0.1:3306/enterprise_qa_demo?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8"
+  business-user: enterprise_qa_reader
+  business-password: "local-reader-password"
+```
+
+使用 IDEA 时，修改 POM 后先 Reload All Maven Projects，再启动或重启问答服务和 MCP 服务。原 `data/business.mv.db` H2 文件保留；H2 仍用于不依赖外部服务的自动测试。
 
 终端一启动 MCP 服务。只读公开仓库和模拟业务查询不需要模型 Key；MCP 生成/向量工具需要 Key。
 
@@ -59,16 +85,19 @@ java -jar target/enterprise-qa-agent-1.0.0.jar --spring.profiles.active=app
 终端三导入示例文档。
 
 ```powershell
-Invoke-RestMethod http://127.0.0.1:8180/api/knowledge/rebuild -Method Post
+Invoke-RestMethod http://127.0.0.1:8085/api/knowledge/rebuild -Method Post
 ```
 
-浏览器打开 **http://127.0.0.1:8180/**。可以上传 UTF-8 Markdown/TXT、连续问答、查看来源和步骤，也可以使用左侧业务查询生成 Excel。`.env.example` 只说明变量，Spring Boot 不会自动读取它。
+浏览器打开 **http://127.0.0.1:8085/**。可以上传 UTF-8 Markdown/TXT、连续问答、查看来源和步骤，也可以使用左侧业务查询生成 Excel。`.env.example` 只说明变量，Spring Boot 不会自动读取它。
 
 可直接提问：
 
 - 产品 A 每袋有多少蛋白质？接着问“它含乳吗？”
 - DEMO-A 现在多少钱，还有多少库存？
 - 按地区统计 2026 年 9 月销售额，并导出 Excel。
+- 按月统计 2026 年 4 月到 9 月的销售额。
+- 列出库存为 0 的商品。
+- 按商品类别统计销售数量和销售额。
 - 先介绍产品 A，再统计华东销售额。
 - 读取已配置代码仓库的 README，并介绍用途。
 
@@ -144,4 +173,4 @@ python -m unittest discover -s scripts -p 'test_*.py'
 python -m unittest discover -s services -p 'test_*.py'
 ```
 
-真实模型与 Milvus 的探针使用 `mvn -Plive-it verify`，需要显式配置相应环境变量；未配置时跳过。不会把本地 HTTP 模型替身当作模型质量验证。
+真实模型、Milvus 与 MySQL 的探针使用 `mvn -Plive-it verify`，需要显式配置相应环境变量；未配置时跳过。MySQL 探针使用 `MYSQL_IT_URL`，可选 `MYSQL_IT_USER` 和 `MYSQL_IT_PASSWORD`，默认使用上述演示只读账号；仅用于测试脚本，应用仍可直接在 YAML 中配置。不会把本地 HTTP 模型替身当作模型质量验证。

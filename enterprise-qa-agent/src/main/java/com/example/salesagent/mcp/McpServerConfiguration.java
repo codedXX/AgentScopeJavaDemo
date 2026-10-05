@@ -56,7 +56,7 @@ public class McpServerConfiguration {
     // 注入传输、配置和 JSON 映射器，为工具创建底层客户端。
     public McpSyncServer mcpServer(HttpServletStreamableServerTransportProvider transport, DemoProperties p, ObjectMapper mapper,
             // appUrl 指向主应用，检索与业务数据库能力通过 HTTP 调用，避免重复写索引。
-            com.example.salesagent.agent.LlmGateway llm, @org.springframework.beans.factory.annotation.Value("${enterprise.app-url:http://127.0.0.1:8180}") String appUrl,
+            com.example.salesagent.agent.LlmGateway llm, @org.springframework.beans.factory.annotation.Value("${enterprise.app-url:http://127.0.0.1:8085}") String appUrl,
             // repository 限定可读取的代码仓库，未配置时使用演示仓库。
             @org.springframework.beans.factory.annotation.Value("${enterprise.github-repository:codedXX/redis-cache-demo}") String repository) {
         // 将 GitHub 地址、认证 token 和固定仓库注入只读仓库工具。

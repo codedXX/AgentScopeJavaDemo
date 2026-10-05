@@ -59,12 +59,12 @@ Java 包名沿用 `com.example.salesagent`，方便与原项目逐文件比较�
 
 ## MCP 工具
 
-MCP 服务在 8181 的 `/mcp` 使用 Streamable HTTP，工具有 `listRepositoryFiles`、`readRepositoryFile`、`getProductStatus`、`generateText`、`embedText`、`searchKnowledge`、`queryDataSource`。模型与Embedding直接调用统一封装；RAG与SQL通过 app REST API调用，避免两个进程同时写 Lucene 和业务库。不要同时在 app profile 和 mcp-server profile 下重复启动同一数据目录的写入者。
+MCP 服务在 8086 的 `/mcp` 使用 Streamable HTTP，工具有 `listRepositoryFiles`、`readRepositoryFile`、`getProductStatus`、`generateText`、`embedText`、`searchKnowledge`、`queryDataSource`。模型与Embedding直接调用统一封装；RAG与SQL通过 app REST API调用，避免两个进程同时写 Lucene 和业务库。不要同时在 app profile 和 mcp-server profile 下重复启动同一数据目录的写入者。
 
 ## 数据与配置
 
 默认 Milvus collection `enterprise_knowledge`；Lucene与父文档位于 `data/milvus`，PGVector与FAISS在对应后端目录。FAISS 用归一化向量和 `IndexFlatIP` 实现余弦搜索，单个 NPZ 快照保存原生索引、向量与元数据，禁止 pickle。PGVector 使用参数绑定、余弦距离和 HNSW；维度超过2000时只使用平面检索。
 
-Text2SQL 使用文件型 H2 演示库，管理员仅在启动时建表和授权，业务执行账号只有 products/sales 的 SELECT 权限。Excel 由标准 OOXML ZIP 生成，文本写 inlineStr，避免把单元格内容作为公式执行。
+Text2SQL 默认使用本机 MySQL 的 enterprise_qa_demo 演示库。管理员凭证保存在不提交的 mysql-admin.properties 中，仅由 scripts/init-mysql-demo.ps1 建库、造数和授权；应用使用 enterprise_qa_reader，只有 products/sales 的 SELECT 权限。scripts/mysql-demo.sql 提供 12 件商品和 364 条固定销售记录，重复导入不覆盖已有主键。SQL 提示词按 JDBC 地址提供 MySQL 方言，支持 DATE_FORMAT/YEAR/MONTH/DAY/DATE 与反引号表名，仍拒绝跨库查询和非只读函数。H2 仅作为自动测试或显式配置的替代库保留。Excel 由标准 OOXML ZIP 生成，文本写 inlineStr，避免把单元格内容作为公式执行。
 
 参考实现接口：[FAISS 索引说明](https://github.com/facebookresearch/faiss/wiki/Faiss-indexes)、[FAISS 索引持久化](https://github.com/facebookresearch/faiss/wiki/Index-IO%2C-cloning-and-hyper-parameter-tuning)、[PGVector 官方文档](https://github.com/pgvector/pgvector)。

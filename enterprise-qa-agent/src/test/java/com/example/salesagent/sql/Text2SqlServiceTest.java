@@ -20,6 +20,19 @@ import static org.mockito.Mockito.*;
 
 // 覆盖聚合、关联、筛选、数据库账号权限及公式注入防护。
 class Text2SqlServiceTest {
+    // 验证 MySQL 方言、反引号表名和时间汇总，并继续拒绝跨库查询与危险函数。
+    @Test
+    void supportsMysqlDialectAndQuotedBusinessTables() {
+        var db = new BusinessDatabase("jdbc:mysql://localhost:3306/enterprise_qa_demo", "enterprise_qa_reader", "test-password");
+        assertTrue(db.schema().contains("只读MySQL兼容SQL"));
+        assertTrue(db.schema().contains("DATE_FORMAT"));
+        assertFalse(db.schema().contains("PostgreSQL"));
+        assertDoesNotThrow(() -> ReadOnlySqlValidator.validate("SELECT DATE_FORMAT(sold_at, '%Y-%m') AS month, SUM(amount) AS total FROM `sales` GROUP BY DATE_FORMAT(sold_at, '%Y-%m')"));
+        assertDoesNotThrow(() -> ReadOnlySqlValidator.validate("SELECT YEAR(sold_at), MONTH(sold_at), DAY(sold_at) FROM `sales`"));
+        assertThrows(IllegalArgumentException.class, () -> ReadOnlySqlValidator.validate("SELECT * FROM mysql.user"));
+        assertThrows(IllegalArgumentException.class, () -> ReadOnlySqlValidator.validate("SELECT * FROM other_database.products"));
+        assertThrows(IllegalArgumentException.class, () -> ReadOnlySqlValidator.validate("SELECT SLEEP(10) FROM `products`"));
+    }
     // 为本测试创建独立导出目录。
     @TempDir
     // 保存 JUnit 分配的临时路径。

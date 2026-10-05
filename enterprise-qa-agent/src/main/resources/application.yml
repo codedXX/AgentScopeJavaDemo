@@ -59,9 +59,9 @@ demo:
   # AgentScope MCP 客户端与业务工具的访问地址。
   mcp:
     # Streamable HTTP 的 MCP 协议入口，客户端在这里初始化和发现工具。
-    url: http://127.0.0.1:8181/mcp
+    url: http://127.0.0.1:8086/mcp
     # 价格库存工具通过 HTTP 回调业务接口的根地址。
-    business-url: http://127.0.0.1:8181
+    business-url: http://127.0.0.1:8086
   # GitHub API 与访问凭证，用于读取已配置仓库。
   github:
     # GitHub REST API 的根地址，工具在其下请求仓库、树和文件。
@@ -78,7 +78,7 @@ logging:
 # 绑定到 EnterpriseProperties 的扩展能力配置。
 enterprise:
   # MCP 检索与 SQL 工具通过此地址访问 app，避免两个进程直接写同一索引。
-  app-url: ${APP_URL:http://127.0.0.1:8180}
+  app-url: ${APP_URL:http://127.0.0.1:8085}
   # 限定可读取的 owner/repository，工具不接受用户提供的任意仓库 URL。
   github-repository: ${GITHUB_REPOSITORY:codedXX/redis-cache-demo}
   # 选择 milvus、pgvector 或 faiss，对应 RagConfiguration 的实际存储适配器。
@@ -111,10 +111,10 @@ enterprise:
   session-dir: ./data/sessions
   # 业务查询生成的 XLSX 文件保存目录。
   export-dir: ./data/exports
-  # 文件型 H2 演示库；启动时设置 PostgreSQL 兼容模式及小写标识符。
-  business-jdbc-url: jdbc:h2:file:./data/business;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
+  # 本机 MySQL 业务演示库；先运行 scripts/init-mysql-demo.ps1 创建表和数据。
+  business-jdbc-url: jdbc:mysql://127.0.0.1:3306/enterprise_qa_demo?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8&connectTimeout=5000&socketTimeout=10000
   # 业务查询账号，仅获 products/sales 的 SELECT 权限。
-  business-user: enterprise_reader
+  business-user: enterprise_qa_reader
   # 只读账号密码允许通过环境覆盖，示例默认值不代表生产凭证。
   business-password: ${BUSINESS_READER_PASSWORD:local-reader-password}
   # 复合问题启用模型计划、依赖校验与逐步执行。

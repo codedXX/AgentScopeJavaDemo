@@ -2,6 +2,20 @@
 
 验证日期：2026-10-04，时区 Asia/Shanghai。Windows，Java 21.0.5，Maven 3.9.16，Python 3.12.14。
 
+## 2026-10-05 按用户要求调整为 8085 / 8086
+
+- 问答默认端口改为 8085，MCP 默认端口改为 8086，并同步配置服务调用地址、请求示例、评测脚本和说明文档。
+- Windows IPv4 / IPv6 TCP 保留范围 8046–8145 包含 8085/8086；两端口实际绑定均返回访问权限不允许。当前配置在本机无法启动，需要先解决系统端口限制。
+- 未修改 Windows 端口保留或网络服务设置。此前 18180/18181 的实际启动验证属于修改前结果。
+
+## 2026-10-05 Windows 保留端口修复
+
+- `netsh interface ipv4/ipv6 show excludedportrange protocol=tcp` 显示本机保留范围为 8146–8245，包含问答和 MCP 原端口 8180/8181。
+- 短暂 TCP 绑定验证：8180/8181 返回访问权限不允许；18180/18181 可绑定并释放。
+- 问答端口调整为 18180，MCP 为 18181，同步修改 MCP URL、业务 URL、app URL、请求示例、评测脚本默认地址和说明文档。
+- 使用本机缓存执行 `mvn -o -Dmaven.repo.local=.work/m2 -Dtest=ApplicationStartupTest,McpIntegrationTest package` 成功；2 项测试，0 失败、0 错误、0 跳过。
+- 临时同时启动实际 JAR：默认端口 18180 的首页与 18181 的业务接口均返回 HTTP 200。验证后关闭本次创建的进程，供 IDEA 重新启动；使用独立临时数据目录和空 Key，未调用模型。
+
 ## 2026-10-05 Milvus 镜像与真实服务验证
 
 - 原 MinIO 镜像在 Quay 无法匿名访问，同版本 Docker Hub 清单查询也被拒绝；官方旧二进制下载地址返回 HTTP 410。
@@ -19,12 +33,22 @@
 - 3 项评测指标测试、2 项真实 FAISS 原生测试通过；前端 JavaScript 的 Node `--check` 通过。
 - JSON/JSONL 数据保持合法格式，说明单独放在 [字段文档](../evaluation/FIELDS.md) 中。
 
+## 2026-10-05 MySQL 业务库迁移
+
+- 使用用户已启动的本机 MySQL 8.0.12（127.0.0.1:3306），没有另建 MySQL 容器。创建 enterprise_qa_demo 专用库和 enterprise_qa_reader 本机只读账号，管理员密码只保存在被忽略的本地文件。
+- 执行 scripts/init-mysql-demo.ps1：导入 12 件商品、364 条销售记录（2026 年 4—9 月），初始销售总额 396,382.00 元。第二次执行后数量和总额不变，未覆盖现有记录。
+- 默认业务 JDBC 配置改为 MySQL，加入官方 Connector/J；SQL 提示词提供 MySQL 方言，校验器支持 DATE_FORMAT、YEAR、MONTH、DAY、DATE 和反引号表名，仍拒绝跨库查询和危险函数。
+- 设置 MYSQL_IT_URL 后执行 `mvn '-Dtest=*Test,MySqlLiveIT' verify`：52 项测试通过，0 失败、0 错误、0 跳过，生成新的可运行 JAR。默认自动测试仍用隔离 H2，MySqlLiveIT 使用真实 MySQL。
+- 真实 MySQL 探针验证精确销售总额、六个月汇总、中文商品 JOIN、零库存筛选、200 行截断及 XLSX 文件；只读账号的零行 UPDATE 被数据库以 1142 错误拒绝。
+- 临时启动新 JAR，app 使用 18185、MCP 使用 18186，与用户仍在运行的 8085/8086 服务隔离；首页和 MCP 业务接口返回 HTTP 200。临时进程验证后关闭，未调用付费模型。
+- 本地日志：`.work/mysql-test.log`、`.work/mysql-smoke/app-alt.log`、`.work/mysql-smoke/mcp-server-alt.log`。用户的 IDEA 服务需重新加载 Maven 后重启，才能使用新 MySQL 配置。
+
 ## 已验证
 
 | 项目 | 结果 |
 |---|---|
 | Maven `verify` | 成功，生成独立可运行 JAR |
-| Java 默认测试 | 50 项通过，0 失败、0 错误、0 跳过 |
+| Java 默认测试 | 51 项通过；本次加上真实 MySQL 探针共 52 项，0 失败、0 错误、0 跳过 |
 | Spring Boot app 完整启动 | 不配置模型 Key、不启动向量服务时也能启动，业务库可查询 |
 | AgentScope ReAct/结构化输出 | 使用本地 HTTP 模型替身执行实际框架链路 |
 | Plan-and-Execute | 知识检索后执行依赖 SQL，真实只读 H2 查询、来源过滤、Excel 导出、会话落盘通过 |

@@ -39,6 +39,11 @@
   </properties>
   <!-- 声明编译与测试所需库，Spring Boot 父工程管理未显式指定的版本。 -->
   <dependencies>
+    <!-- MySQL 官方 JDBC 驱动，版本由 Spring Boot 管理。 -->
+    <dependency>
+      <groupId>com.mysql</groupId>
+      <artifactId>mysql-connector-j</artifactId>
+    </dependency>
     <!-- 把下方 groupId/artifactId 对应的库加入项目 classpath。 -->
     <dependency>
       <!-- 组织坐标，用于 Maven 识别项目、依赖或插件所属命名空间。 -->

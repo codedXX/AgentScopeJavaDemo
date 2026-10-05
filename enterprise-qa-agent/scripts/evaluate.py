@@ -154,8 +154,8 @@ def dump_lines(path, rows):
 def main():
     # 建立命令行解析器，非法参数会给出使用说明并退出。
     parser = argparse.ArgumentParser()
-    # 可指定问答服务地址，默认连接本项目的 8180 端口。
-    parser.add_argument("--base", default="http://127.0.0.1:8180")
+    # 可指定问答服务地址，默认连接本项目的 8085 端口。
+    parser.add_argument("--base", default="http://127.0.0.1:8085")
     # 指定带问题和参考证据的 JSONL 样本文件。
     parser.add_argument("--cases", type=Path, default=Path("evaluation/cases.jsonl"))
     # 指定逐条结果文件；摘要和 Badcase 将写入同目录。
