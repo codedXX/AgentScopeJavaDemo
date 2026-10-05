@@ -1,5 +1,5 @@
 // 将模拟实时业务接口归入 API 包。
-package com.example.salesagent.api;
+package com.example.salesagent.controller;
 
 // 导入 UTC 时间戳类型，为业务结果标记返回时刻。
 import java.time.Instant;

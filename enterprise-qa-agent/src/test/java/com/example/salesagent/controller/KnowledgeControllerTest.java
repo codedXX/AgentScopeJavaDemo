@@ -1,5 +1,5 @@
 // 将知识库上传 HTTP 行为测试放入 API 测试包。
-package com.example.salesagent.api;
+package com.example.salesagent.controller;
 
 // 导入知识摄取服务，为控制器注入 Mockito 替身。
 import com.example.salesagent.rag.KnowledgeIngestionService;

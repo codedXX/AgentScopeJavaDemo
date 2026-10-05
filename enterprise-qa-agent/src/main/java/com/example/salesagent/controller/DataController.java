@@ -1,5 +1,5 @@
 // 将业务数据查询和导出下载入口归入 API 包。
-package com.example.salesagent.api;
+package com.example.salesagent.controller;
 
 // 导入企业配置，读取 Excel 导出文件所在目录。
 import com.example.salesagent.config.EnterpriseProperties;

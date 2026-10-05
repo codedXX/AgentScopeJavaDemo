@@ -1,5 +1,5 @@
 // 将独立检索 HTTP 接口放入 API 包。
-package com.example.salesagent.api;
+package com.example.salesagent.controller;
 
 // 导入携带检索证据、来源和耗时的结果对象。
 import com.example.salesagent.model.RagResult;

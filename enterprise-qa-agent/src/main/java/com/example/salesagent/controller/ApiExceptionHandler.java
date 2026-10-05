@@ -1,5 +1,5 @@
 // 将跨控制器的 HTTP 异常映射归入 API 包。
-package com.example.salesagent.api;
+package com.example.salesagent.controller;
 
 // 导入键值映射，为错误响应构造统一的 error 字段。
 import java.util.Map;

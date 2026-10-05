@@ -1,5 +1,5 @@
 // 将 HTTP 对话入口放在 API 包，便于 Spring 扫描控制器。
-package com.example.salesagent.api;
+package com.example.salesagent.controller;
 
 // 导入负责意图判断、检索和工具调用的销售问答服务。
 import com.example.salesagent.agent.SalesAssistant;

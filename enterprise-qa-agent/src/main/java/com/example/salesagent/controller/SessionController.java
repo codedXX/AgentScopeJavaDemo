@@ -1,5 +1,5 @@
 // 将会话查询入口归入 API 包。
-package com.example.salesagent.api;
+package com.example.salesagent.controller;
 
 // 导入能够从磁盘恢复会话的持久化存储。
 import com.example.salesagent.agent.PersistentConversationStore;

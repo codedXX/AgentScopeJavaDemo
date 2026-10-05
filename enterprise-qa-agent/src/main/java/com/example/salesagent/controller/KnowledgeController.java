@@ -1,5 +1,5 @@
 // 将知识库维护 HTTP 接口归入 API 包。
-package com.example.salesagent.api;
+package com.example.salesagent.controller;
 
 // 导入上传文档、重建索引和读取构建状态的服务。
 import com.example.salesagent.rag.KnowledgeIngestionService;

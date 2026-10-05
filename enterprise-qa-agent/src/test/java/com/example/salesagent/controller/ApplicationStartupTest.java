@@ -1,5 +1,5 @@
 // 将主应用启动与数据库、敏感问题联动测试放入 API 测试包。
-package com.example.salesagent.api;
+package com.example.salesagent.controller;
 
 // 导入 Spring Boot 主入口，创建真实应用上下文。
 import com.example.salesagent.SalesAgentApplication;
