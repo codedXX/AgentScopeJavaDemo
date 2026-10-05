@@ -1,0 +1,12 @@
+# 选择轻量 Python 3.11 Linux 基础镜像，安装 FAISS CPU 轮子并运行服务。
+FROM python:3.11-slim
+# 后续复制、安装和启动都以 /app 为当前目录。
+WORKDIR /app
+# 先复制依赖清单，源码变化时可复用依赖安装镜像层。
+COPY services/requirements.txt .
+# 安装固定版本依赖且不保留 pip 下载缓存，减小最终镜像。
+RUN pip install --no-cache-dir -r requirements.txt
+# 把实际 FAISS 服务复制到容器工作目录。
+COPY services/faiss_service.py .
+# 用 Uvicorn 在容器内监听 8182；Compose 仅把该端口映射到宿主机 127.0.0.1。
+CMD ["uvicorn", "faiss_service:app", "--host", "0.0.0.0", "--port", "8182"]

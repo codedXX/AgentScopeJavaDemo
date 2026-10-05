@@ -1,0 +1,14 @@
+# 问答 app profile 的 HTTP 设置。
+server:
+  # 问答页面、知识库、会话、检索及 SQL 接口监听 8180。
+  port: 8180
+# app 模式下的 Spring Web 配置。
+spring:
+  # Servlet 容器接收 HTTP 文件上传的设置。
+  servlet:
+    # 限制 multipart 上传，防止单次请求占用过多内存。
+    multipart:
+      # 单个上传知识文件最大 5 MB，与后端内容检查一致。
+      max-file-size: 5MB
+      # 整次请求最多 6 MB，为 multipart 边界和表单元数据预留空间。
+      max-request-size: 6MB

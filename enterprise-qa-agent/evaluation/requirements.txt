@@ -1,0 +1,6 @@
+# 固定支持 collections Faithfulness API 的评测框架版本。
+ragas==0.4.3
+# 用于调用 OpenAI 兼容评审模型；版本范围允许已验证客户端。
+openai>=1.100.0,<3
+# 限制在 0.4.2 之前，兼容此 RAGAS 版本仍引用的社区模块。
+langchain-community<0.4.2

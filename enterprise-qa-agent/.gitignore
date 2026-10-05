@@ -1,0 +1,26 @@
+# 忽略 Maven 编译产物、JAR 和测试报告，源码仓库只保留可重建内容。
+target/
+# 忽略本机依赖缓存、临时生成脚本和验证辅助文件。
+.work/
+# 忽略可能含真实 Key 的本地环境文件，示例文件另外保留。
+.env
+# 本地模型配置可能包含真实 API Key，不提交到仓库。
+/application-local.yml
+# 忽略 IntelliJ IDEA 的本机项目配置。
+.idea/
+# 忽略 IDE 模块元数据。
+*.iml
+# 忽略知识索引、业务库、持久化会话及导出，避免提交用户数据。
+data/
+# 忽略真实评测结果，结果可能含输入问题和回答数据。
+evaluation/results*.json*
+# 忽略项目 Python 虚拟环境，依赖由 requirements 重建。
+.venv/
+# 忽略 Python 运行生成的字节码缓存目录。
+__pycache__/
+# 忽略散落的 Python 字节码缓存文件。
+*.pyc
+# 忽略实际问题样本与根因记录，按需要单独管理评测数据。
+evaluation/badcases.jsonl
+# 忽略本次真实人工标签，避免与教学示例混淆。
+evaluation/my-labels.json

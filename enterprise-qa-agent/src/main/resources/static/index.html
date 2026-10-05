@@ -1,0 +1,194 @@
+<!doctype html>
+<!--
+声明页面语言为简体中文，帮助浏览器和屏幕朗读器选择语言。
+--><html lang="zh-CN">
+<!--
+页面元信息与资源声明区域，不作为正文显示。
+--><head>
+  <!--
+声明文档编码或移动端 viewport，保证中文和窄屏展示正常。
+--><meta charset="UTF-8"><!--
+声明文档编码或移动端 viewport，保证中文和窄屏展示正常。
+--><meta name="viewport" content="width=device-width, initial-scale=1">
+  <!--
+浏览器标签页显示的工作台名称。
+--><title>知答 · 企业知识工作台</title><!--
+载入同服务下的样式文件，不需要前端构建工具。
+--><link rel="stylesheet" href="/styles.css">
+  <!--
+defer 让脚本在 HTML 解析后执行，绑定事件时节点已经存在。
+--><script src="/app.js" defer></script>
+</head>
+<!--
+可见工作台内容的根容器。
+--><body>
+<!--
+展示品牌入口与页面说明。
+--><header><!--
+品牌链接返回工作台首页，aria-label 说明此导航用途。
+--><a class="brand" href="/" aria-label="知答首页"><!--
+内联展示徽标、图标或提示；aria-hidden 的装饰内容不参与朗读。
+--><span class="brand-mark">知</span>知答 <!--
+显示品牌旁的次级工作台名称。
+--><small>企业知识工作台</small></a><!--
+内联展示徽标、图标或提示；aria-hidden 的装饰内容不参与朗读。
+--><span class="header-note">让每个答案，有据可循</span></header>
+<!--
+工作台主要内容，桌面布局分为资料侧栏与对话面板。
+--><main>
+  <!--
+资料管理与业务查询的侧栏。
+--><aside>
+    <!--
+用于分组和布局，class 与样式表中的同名选择器对应。
+--><div class="section-label">KNOWLEDGE LIBRARY</div><!--
+页面主要操作说明标题。
+--><h1>把资料变成答案。</h1><!--
+展示说明或反馈文本，部分节点由 JavaScript 实时更新。
+--><p class="intro">导入产品资料与业务文档，围绕你的知识库展开对话。</p>
+    <!--
+按功能组织知识库、业务查询或对话区域。
+--><section class="library-card" aria-labelledby="library-title">
+      <!--
+用于分组和布局，class 与样式表中的同名选择器对应。
+--><div class="card-title"><!--
+知识库区域的可访问名称，aria-labelledby 会引用此标题。
+--><h2 id="library-title">知识库</h2><!--
+由 app.js 根据 ready 更新的知识库状态徽标。
+--><span id="status" class="badge">连接中</span></div>
+      <!--
+用于分组和布局，class 与样式表中的同名选择器对应。
+--><div class="library-count"><!--
+显示后台发布索引后的实际分块数。
+--><strong id="chunk-count">—</strong><!--
+内联展示徽标、图标或提示；aria-hidden 的装饰内容不参与朗读。
+--><span>个知识片段</span></div>
+      <!--
+朗读并显示知识状态、重建进度或连接错误说明。
+--><p id="status-detail" class="muted" role="status">正在读取知识库状态…</p>
+      <!--
+手动读取知识状态的按钮，不触发重建。
+--><button id="refresh" class="text-button" type="button">刷新状态 ↻</button>
+    </section>
+    <!--
+提交单文件 multipart 上传的表单，JavaScript 阻止默认页面跳转。
+--><form id="upload-form">
+      <!--
+可点击选文件也可拖放的上传区，绑定 file 输入框。
+--><label class="drop-zone" id="drop-zone" for="file"><!--
+内联展示徽标、图标或提示；aria-hidden 的装饰内容不参与朗读。
+--><span class="upload-icon" aria-hidden="true">↥</span><!--
+强调知识片段数量或上传操作提示。
+--><strong>选择或拖入一份资料</strong><!--
+内联展示徽标、图标或提示；aria-hidden 的装饰内容不参与朗读。
+--><span>TXT / Markdown · UTF-8 · 最大 5 MB</span><!--
+限制选择 TXT/MD 的文件控件，后台仍验证 UTF-8、大小和扩展名。
+--><input id="file" name="file" type="file" accept=".txt,.md" required></label>
+      <!--
+展示当前待上传文件名与大小。
+--><p id="selected-file" class="muted">尚未选择文件</p>
+      <!--
+真正发起上传、Embedding 和索引重建的按钮。
+--><button id="upload" class="primary full" type="submit">上传并入库 <!--
+内联展示徽标、图标或提示；aria-hidden 的装饰内容不参与朗读。
+--><span aria-hidden="true">↗</span></button>
+    </form>
+    <!--
+上传或重建结果的可访问反馈区域，polite 避免打断当前朗读。
+--><p id="upload-feedback" class="feedback" role="status" aria-live="polite"></p>
+    <!--
+展示说明或反馈文本，部分节点由 JavaScript 实时更新。
+--><p class="fine-print">上传后将重新索引全部资料，期间知识检索暂不可用。同名文件会独立保存。</p>
+    <!--
+重新处理已有资料，用于文件保存后索引失败的重试。
+--><button id="rebuild" class="secondary full" type="button">重建知识库 / 失败后重试</button>
+    <!--
+按功能组织知识库、业务查询或对话区域。
+--><section class="library-card" style="margin-top:24px">
+      <!--
+知识库、业务查询或对话区域的标题。
+--><h2>业务数据查询</h2><!--
+展示说明或反馈文本，部分节点由 JavaScript 实时更新。
+--><p class="muted">查询演示商品与销量，支持条件筛选、汇总和 Excel 导出。</p>
+      <!--
+独立自然语言业务查询表单，与普通对话会话分开。
+--><form id="sql-form"><!--
+关联输入框的可访问名称；点击标签也可激活对应控件。
+--><label class="sr-only" for="sql-question">业务查询问题</label>
+        <!--
+最长 2000 字的业务筛选或统计问题，支持多行编辑。
+--><textarea id="sql-question" rows="3" maxlength="2000" placeholder="按地区统计9月销售额" required></textarea>
+        <!--
+关联输入框的可访问名称；点击标签也可激活对应控件。
+--><label class="muted"><!--
+默认勾选，查询时同时请求后台生成 XLSX。
+--><input id="sql-export" type="checkbox" checked> 同时导出 Excel</label>
+        <!--
+业务查询提交按钮，请求过程中会禁用以防重复提交。
+--><button id="sql-submit" class="primary full" type="submit">查询业务数据</button>
+      </form><!--
+显示业务查询进行中、错误或模拟数据行数。
+--><p id="sql-feedback" class="feedback" role="status"></p><!--
+承载查询表格与下载链接，超宽数据允许横向滚动。
+--><div id="sql-result" style="overflow:auto"></div>
+    </section>
+  </aside>
+  <!--
+按功能组织知识库、业务查询或对话区域。
+--><section class="chat-panel" aria-labelledby="chat-title">
+    <!--
+用于分组和布局，class 与样式表中的同名选择器对应。
+--><div class="chat-header"><!--
+用于分组和布局，class 与样式表中的同名选择器对应。
+--><div><!--
+用于分组和布局，class 与样式表中的同名选择器对应。
+--><div class="section-label">ASK YOUR KNOWLEDGE</div><!--
+对话区域标题，供 aria-labelledby 提供可访问名称。
+--><h2 id="chat-title">知识问答</h2></div><!--
+开始新的会话，清理当前页面历史与浏览器保存的 ID。
+--><button id="new-chat" class="secondary" type="button">＋ 新对话</button></div>
+    <!--
+对话消息容器，用 log 和 aria-live 向辅助工具报告新消息。
+--><div id="messages" class="messages" role="log" aria-live="polite" aria-relevant="additions text">
+      <!--
+尚未产生消息时显示欢迎内容与可编辑的示例问题。
+--><div id="welcome" class="welcome"><!--
+用于分组和布局，class 与样式表中的同名选择器对应。
+--><div class="conversation-symbol" aria-hidden="true">“</div><!--
+欢迎区的引导标题。
+--><h3>从一个问题开始</h3><!--
+展示说明或反馈文本，部分节点由 JavaScript 实时更新。
+--><p>可以询问产品信息，也可以接着上一条回答继续追问。<!--
+在引导文本中明确换行，保留页面原有文本布局。
+--><br>上传自己的资料后，即可围绕资料提问。</p><!--
+用于分组和布局，class 与样式表中的同名选择器对应。
+--><div class="suggestions"><!--
+明确 type 防止普通操作意外提交表单，示例按钮只填入问题。
+--><button type="button">演示蛋白营养粉 A 每袋有多少蛋白质？</button><!--
+明确 type 防止普通操作意外提交表单，示例按钮只填入问题。
+--><button type="button">DEMO-A 现在多少钱，还有库存吗？</button><!--
+明确 type 防止普通操作意外提交表单，示例按钮只填入问题。
+--><button type="button">先介绍产品A，再统计华东销售额</button></div></div>
+    </div>
+    <!--
+用于分组和布局，class 与样式表中的同名选择器对应。
+--><div class="composer-wrap"><!--
+对话失败重试或历史恢复状态的提示区域。
+--><p id="chat-feedback" class="feedback" role="status"></p><!--
+发送问答的表单，Enter 快捷发送也通过此表单入口。
+--><form id="chat-form" class="composer"><!--
+关联输入框的可访问名称；点击标签也可激活对应控件。
+--><label class="sr-only" for="question">输入问题</label><!--
+最长 2000 字的问答输入框，Shift+Enter 可换行。
+--><textarea id="question" placeholder="输入你的问题…" maxlength="2000" rows="2" required></textarea><!--
+用于分组和布局，class 与样式表中的同名选择器对应。
+--><div class="composer-bottom"><!--
+内联展示徽标、图标或提示；aria-hidden 的装饰内容不参与朗读。
+--><span>Enter 发送 · Shift + Enter 换行</span><!--
+向 /api/chat 提交本轮问题，问答或重建过程中禁用。
+--><button id="send" class="primary" type="submit">发送 ↑</button></div></form><!--
+展示说明或反馈文本，部分节点由 JavaScript 实时更新。
+--><p class="disclaimer">回答由 AI 生成，请结合引用来源核实。业务数据为演示数据。</p></div>
+  </section>
+</main>
+</body></html>

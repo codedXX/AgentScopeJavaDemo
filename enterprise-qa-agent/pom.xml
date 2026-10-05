@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Maven 项目根节点，声明 POM XML 命名空间与校验规则。 -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <!-- POM 模型版本固定为 4.0.0，表示使用当前 Maven 标准结构。 -->
+  <modelVersion>4.0.0</modelVersion>
+  <!-- 继承 Spring Boot 的依赖管理、插件默认值和构建约定。 -->
+  <parent>
+    <!-- 组织坐标，用于 Maven 识别项目、依赖或插件所属命名空间。 -->
+    <groupId>org.springframework.boot</groupId>
+    <!-- Spring Boot 父工程，统一管理依赖和插件版本。 -->
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <!-- 锁定对应父工程、项目、依赖或插件的版本。 -->
+    <version>3.5.11</version>
+    <!-- 不通过上级目录找父 POM，改为从 Maven 仓库解析 Spring Boot 父工程。 -->
+    <relativePath/>
+  </parent>
+  <!-- 组织坐标，用于 Maven 识别项目、依赖或插件所属命名空间。 -->
+  <groupId>com.example</groupId>
+  <!-- 扩展项目的独立 artifactId，生成 enterprise-qa-agent JAR。 -->
+  <artifactId>enterprise-qa-agent</artifactId>
+  <!-- 锁定对应父工程、项目、依赖或插件的版本。 -->
+  <version>1.0.0</version>
+  <!-- 构建日志中的项目显示名。 -->
+  <name>Enterprise QA Agent</name>
+  <!-- 集中管理 JDK 及框架版本，后续通过 Maven 属性引用。 -->
+  <properties>
+    <!-- Java 21 编译目标，项目使用虚拟线程等该版本能力。 -->
+    <java.version>21</java.version>
+    <!-- 统一 AgentScope 框架版本，避免模型、Toolkit 与 MCP 接口不一致。 -->
+    <agentscope.version>1.0.12</agentscope.version>
+    <!-- 锁定官方 MCP SDK 版本，与本项目 Streamable HTTP 实现对齐。 -->
+    <mcp.version>0.17.0</mcp.version>
+    <!-- Lucene 核心、中文分词与查询解析模块共用同一版本。 -->
+    <lucene.version>9.12.3</lucene.version>
+    <!-- 覆盖 JSON 库 BOM 版本，统一结构化回答与接口序列化依赖。 -->
+    <jackson-bom.version>2.21.1</jackson-bom.version>
+    <!-- 覆盖 Reactor BOM，AgentScope 的 Mono 调用使用此依赖体系。 -->
+    <reactor-bom.version>2025.0.2</reactor-bom.version>
+  </properties>
+  <!-- 声明编译与测试所需库，Spring Boot 父工程管理未显式指定的版本。 -->
+  <dependencies>
+    <!-- 把下方 groupId/artifactId 对应的库加入项目 classpath。 -->
+    <dependency>
+      <!-- 组织坐标，用于 Maven 识别项目、依赖或插件所属命名空间。 -->
+      <groupId>com.h2database</groupId>
+      <!-- 嵌入式文件数据库，承载只读 SQL 演示数据。 -->
+      <artifactId>h2</artifactId>
+    </dependency>
+    <!-- 把下方 groupId/artifactId 对应的库加入项目 classpath。 -->
+    <dependency>
+      <!-- 组织坐标，用于 Maven 识别项目、依赖或插件所属命名空间。 -->
+      <groupId>org.postgresql</groupId>
+      <!-- PostgreSQL JDBC 驱动，供 PGVector 后端连接数据库。 -->
+      <artifactId>postgresql</artifactId>
+    </dependency>
+    <!-- 把下方 groupId/artifactId 对应的库加入项目 classpath。 -->
+    <dependency>
+      <!-- 组织坐标，用于 Maven 识别项目、依赖或插件所属命名空间。 -->
+      <groupId>com.github.jsqlparser</groupId>
+      <!-- SQL AST 解析器，检查单条 SELECT、表白名单与函数白名单。 -->
+      <artifactId>jsqlparser</artifactId>
+      <!-- 锁定对应父工程、项目、依赖或插件的版本。 -->
+      <version>4.9</version>
+    </dependency>
+    <!-- 把下方 groupId/artifactId 对应的库加入项目 classpath。 -->
+    <dependency>
+      <!-- 组织坐标，用于 Maven 识别项目、依赖或插件所属命名空间。 -->
+      <groupId>org.springframework.boot</groupId>
+      <!-- Spring MVC、嵌入式 Tomcat 与静态工作台资源服务。 -->
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <!-- 把下方 groupId/artifactId 对应的库加入项目 classpath。 -->
+    <dependency>
+      <!-- 组织坐标，用于 Maven 识别项目、依赖或插件所属命名空间。 -->
+      <groupId>org.springframework.boot</groupId>
+      <!-- 请求字段校验，限制问题长度与会话 ID 格式。 -->
+      <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+    <!-- 把下方 groupId/artifactId 对应的库加入项目 classpath。 -->
+    <dependency>
+      <!-- 组织坐标，用于 Maven 识别项目、依赖或插件所属命名空间。 -->
+      <groupId>io.agentscope</groupId>
+      <!-- AgentScope ReAct、结构化输出、Memory、Toolkit 和 MCP 客户端。 -->
+      <artifactId>agentscope</artifactId>
+      <!-- 锁定对应父工程、项目、依赖或插件的版本。 -->
+      <version>${agentscope.version}</version>
+    </dependency>
+    <!-- 把下方 groupId/artifactId 对应的库加入项目 classpath。 -->
+    <dependency>
+      <!-- 组织坐标，用于 Maven 识别项目、依赖或插件所属命名空间。 -->
+      <groupId>com.alibaba</groupId>
+      <!-- 百炼官方 SDK，用于 Embedding 与 Rerank 调用。 -->
+      <artifactId>dashscope-sdk-java</artifactId>
+      <!-- 锁定对应父工程、项目、依赖或插件的版本。 -->
+      <version>2.23.1</version>
+    </dependency>
+    <!-- 把下方 groupId/artifactId 对应的库加入项目 classpath。 -->
+    <dependency>
+      <!-- 组织坐标，用于 Maven 识别项目、依赖或插件所属命名空间。 -->
+      <groupId>io.milvus</groupId>
+      <!-- Milvus 官方 Java SDK，负责真实向量入库与检索。 -->
+      <artifactId>milvus-sdk-java</artifactId>
+      <!-- 锁定对应父工程、项目、依赖或插件的版本。 -->
+      <version>2.6.6</version>
+    </dependency>
+    <!-- 仅使用这里的 DocumentSplitters，不使用 LangChain4j 的 Agent/Memory。 -->
+    <!-- 把下方 groupId/artifactId 对应的库加入项目 classpath。 -->
+    <dependency>
+      <!-- 组织坐标，用于 Maven 识别项目、依赖或插件所属命名空间。 -->
+      <groupId>dev.langchain4j</groupId>
+      <!-- 仅使用递归 DocumentSplitters，不替换 AgentScope 的 Agent 或 Memory。 -->
+      <artifactId>langchain4j</artifactId>
+      <!-- 锁定对应父工程、项目、依赖或插件的版本。 -->
+      <version>1.11.0</version>
+    </dependency>
+    <!-- 把下方 groupId/artifactId 对应的库加入项目 classpath。 -->
+    <dependency>
+      <!-- 组织坐标，用于 Maven 识别项目、依赖或插件所属命名空间。 -->
+      <groupId>org.apache.lucene</groupId>
+      <!-- Lucene 索引与 BM25 检索核心。 -->
+      <artifactId>lucene-core</artifactId>
+      <!-- 锁定对应父工程、项目、依赖或插件的版本。 -->
+      <version>${lucene.version}</version>
+    </dependency>
+    <!-- 把下方 groupId/artifactId 对应的库加入项目 classpath。 -->
+    <dependency>
+      <!-- 组织坐标，用于 Maven 识别项目、依赖或插件所属命名空间。 -->
+      <groupId>org.apache.lucene</groupId>
+      <!-- 中文分析器，使建索引与查询使用同样的分词规则。 -->
+      <artifactId>lucene-analysis-smartcn</artifactId>
+      <!-- 锁定对应父工程、项目、依赖或插件的版本。 -->
+      <version>${lucene.version}</version>
+    </dependency>
+    <!-- 把下方 groupId/artifactId 对应的库加入项目 classpath。 -->
+    <dependency>
+      <!-- 组织坐标，用于 Maven 识别项目、依赖或插件所属命名空间。 -->
+      <groupId>org.apache.lucene</groupId>
+      <!-- 转义并解析关键词查询，不把输入当作任意 Lucene 语法执行。 -->
+      <artifactId>lucene-queryparser</artifactId>
+      <!-- 锁定对应父工程、项目、依赖或插件的版本。 -->
+      <version>${lucene.version}</version>
+    </dependency>
+    <!-- 把下方 groupId/artifactId 对应的库加入项目 classpath。 -->
+    <dependency>
+      <!-- 组织坐标，用于 Maven 识别项目、依赖或插件所属命名空间。 -->
+      <groupId>io.modelcontextprotocol.sdk</groupId>
+      <!-- 官方 MCP 协议实现，用于 Streamable HTTP 服务端与客户端。 -->
+      <artifactId>mcp</artifactId>
+      <!-- 锁定对应父工程、项目、依赖或插件的版本。 -->
+      <version>${mcp.version}</version>
+    </dependency>
+    <!-- 把下方 groupId/artifactId 对应的库加入项目 classpath。 -->
+    <dependency>
+      <!-- 组织坐标，用于 Maven 识别项目、依赖或插件所属命名空间。 -->
+      <groupId>org.springframework.boot</groupId>
+      <!-- JUnit、Mockito 与 Spring 测试支持，只在测试阶段使用。 -->
+      <artifactId>spring-boot-starter-test</artifactId>
+      <!-- test 范围只用于测试，不会打包进生产 JAR。 -->
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  <!-- 定义如何编译、测试与生成可执行产物。 -->
+  <build>
+    <!-- 下方插件参与 Maven 生命周期；构建和 live-it 各自使用对应配置。 -->
+    <plugins>
+      <!-- 配置一个具体构建插件及其执行方式。 -->
+      <plugin>
+        <!-- 组织坐标，用于 Maven 识别项目、依赖或插件所属命名空间。 -->
+        <groupId>org.springframework.boot</groupId>
+        <!-- 将依赖和启动类打包成可通过 java -jar 运行的应用。 -->
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+      <!-- 配置一个具体构建插件及其执行方式。 -->
+      <plugin>
+        <!-- 组织坐标，用于 Maven 识别项目、依赖或插件所属命名空间。 -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <!-- 运行默认单元与本地集成测试，应用 UTF-8 JVM 参数。 -->
+        <artifactId>maven-surefire-plugin</artifactId>
+        <!-- 向插件传递运行参数。 -->
+        <configuration>
+          <!-- 测试 JVM 使用 UTF-8，避免 Windows 默认编码影响中文断言。 -->
+          <argLine>-Dfile.encoding=UTF-8</argLine>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+  <!-- 按需启用附加构建步骤，默认测试不访问真实模型或向量服务。 -->
+  <profiles>
+    <!-- 定义可用 -P 显式启用的构建模式。 -->
+    <profile>
+      <!-- live-it 用于运行需要真实服务与凭证的集成探针。 -->
+      <id>live-it</id>
+      <!-- 定义如何编译、测试与生成可执行产物。 -->
+      <build>
+        <!-- 下方插件参与 Maven 生命周期；构建和 live-it 各自使用对应配置。 -->
+        <plugins>
+          <!-- 配置一个具体构建插件及其执行方式。 -->
+          <plugin>
+            <!-- 组织坐标，用于 Maven 识别项目、依赖或插件所属命名空间。 -->
+            <groupId>org.apache.maven.plugins</groupId>
+            <!-- 在 live-it profile 中运行真实外部服务集成测试。 -->
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <!-- 锁定对应父工程、项目、依赖或插件的版本。 -->
+            <version>3.5.4</version>
+            <!-- 指定插件参与哪些 Maven 阶段。 -->
+            <executions>
+              <!-- 一组插件执行目标，共用同一个 Failsafe 插件实例。 -->
+              <execution>
+                <!-- 下面两个目标负责运行集成测试并检查最终结果。 -->
+                <goals>
+                  <!-- 指定 Maven 插件执行目标；integration-test 运行测试，verify 检查结果。 -->
+                  <goal>integration-test</goal>
+                  <!-- 指定 Maven 插件执行目标；integration-test 运行测试，verify 检查结果。 -->
+                  <goal>verify</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

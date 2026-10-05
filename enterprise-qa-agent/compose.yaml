@@ -1,0 +1,36 @@
+# 采用 Milvus 官方 standalone_embed.sh 的内置 etcd / 本地存储部署方式。
+# 官方参考：https://github.com/milvus-io/milvus/blob/v2.6.6/scripts/standalone_embed.sh
+# 本机学习环境只需下载 Milvus 镜像，避免依赖已无法匿名拉取的 MinIO 镜像。
+name: enterprise-qa-agent
+services:
+  standalone:
+    # 与项目 Milvus Java SDK 使用相同版本。
+    image: milvusdb/milvus:v2.6.6
+    command: ["milvus", "run", "standalone"]
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      # 元数据由同一个容器内的 etcd 保存。
+      ETCD_USE_EMBED: "true"
+      ETCD_DATA_DIR: /var/lib/milvus/etcd
+      ETCD_CONFIG_PATH: /milvus/configs/embedEtcd.yaml
+      # 向量与索引文件直接保存在持久化卷中。
+      COMMON_STORAGETYPE: local
+      DEPLOY_MODE: STANDALONE
+    volumes:
+      # 使用独立卷，避免与之前的外部 etcd / MinIO 布局混用。
+      - milvus-embedded-data:/var/lib/milvus
+      - ./docker/milvus/embedEtcd.yaml:/milvus/configs/embedEtcd.yaml:ro
+      - ./docker/milvus/user.yaml:/milvus/configs/user.yaml:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 30s
+      start_period: 90s
+      timeout: 20s
+      retries: 3
+    # 继续使用 Java 配置中的 19540，并只允许本机访问。
+    ports:
+      - "127.0.0.1:19540:19530"
+      - "127.0.0.1:9092:9091"
+volumes:
+  milvus-embedded-data:

@@ -1,0 +1,54 @@
+# 独立 Docker Compose 项目名，命名卷与其他 Demo 隔离。
+name: enterprise-qa-backends
+# 声明可选 PGVector 与 FAISS 服务，按需要启动其中一个。
+services:
+  # PostgreSQL 加 vector 扩展的向量存储后端。
+  pgvector:
+    # 使用带 pgvector 扩展的 PostgreSQL 17 镜像。
+    image: pgvector/pgvector:pg17
+    # 首次初始化 PostgreSQL 时使用的数据库与用户参数。
+    environment:
+      # 创建 enterprise 数据库，与默认 JDBC URL 对齐。
+      POSTGRES_DB: enterprise
+      # 创建 enterprise 演示数据库用户。
+      POSTGRES_USER: enterprise
+      # 读取 PGVECTOR_PASSWORD，未设置则使用本地演示密码。
+      POSTGRES_PASSWORD: ${PGVECTOR_PASSWORD:-local-demo-password}
+    # 限定宿主端口只允许本机访问。
+    ports:
+      # 将本机 55432 映射到容器 PostgreSQL 5432。
+      - "127.0.0.1:55432:5432"
+    # 将 PostgreSQL 数据保存到独立命名卷，容器重建后仍可恢复。
+    volumes:
+      # 挂载正式 PostgreSQL 数据目录，避免数据只保留在容器层。
+      - pgvector-data:/var/lib/postgresql/data
+    # 通过数据库就绪探针观察容器是否可以接受连接。
+    healthcheck:
+      # 以指定数据库和用户运行 pg_isready，不执行任何数据查询或修改。
+      test: ["CMD-SHELL", "pg_isready -U enterprise -d enterprise"]
+      # 每 5 秒检查一次就绪状态。
+      interval: 5s
+      # 连续失败 20 次后标记不健康，给首次初始化留出时间。
+      retries: 20
+  # 用本项目 Python HTTP 服务提供真实 FAISS 索引。
+  faiss:
+    # FAISS 镜像从本地源码构建。
+    build:
+      # 整个项目目录作为构建上下文，Dockerfile 才能读取 services 下的文件。
+      context: .
+      # 使用专门的 Python/FAISS Dockerfile。
+      dockerfile: services/Dockerfile.faiss
+    # 只暴露本机可访问的 FAISS HTTP 端口。
+    ports:
+      # 本机与容器都使用 8182，与 Java 的默认 faiss-url 对齐。
+      - "127.0.0.1:8182:8182"
+    # FAISS 索引快照写入独立命名卷。
+    volumes:
+      # 将服务默认 data/faiss 目录持久化，容器重建仍保留 NPZ。
+      - faiss-data:/app/data/faiss
+# 定义由 Compose 管理的两种后端存储卷。
+volumes:
+  # PostgreSQL 存储卷声明，实际名字会带本项目名前缀。
+  pgvector-data:
+  # FAISS 快照卷声明，与 PostgreSQL 数据互不混用。
+  faiss-data:

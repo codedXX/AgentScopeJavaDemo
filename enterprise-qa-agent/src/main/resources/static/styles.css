@@ -1,0 +1,769 @@
+/* 集中声明主题变量及全局字体。 */
+:root {
+  /* 主正文颜色，其他规则通过 var(--ink) 共用。 */
+  --ink:#192e41;
+  /* 说明和次要文字颜色。 */
+  --muted:#63798b;
+  /* 按钮、品牌和交互强调色。 */
+  --accent:#126a79;
+  /* 柔和底色，用于徽标、用户消息与选中态。 */
+  --soft:#e9f3f4;
+  /* 统一边框及分隔线颜色。 */
+  --line:#dce6ec;
+  /* 页面和次级控件背景色。 */
+  --paper:#f5f8fb;
+  /* 卡片与面板底色。 */
+  --white:#fff;
+  /* 错误反馈颜色。 */
+  --danger:#a63336;
+  /* 选择中文系统字体或特定标题/数字字体，按顺序回退。 */
+  font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:var(--ink);
+  /* 设置背景颜色或透明背景，区分卡片、按钮和消息角色。 */
+  background:var(--paper)
+}
+/* 所有元素统一尺寸计算，移动偏好规则中也可统一关闭动画。 */
+* {
+  /* border-box 让设定尺寸包含 padding 和 border，简化响应式布局。 */
+  box-sizing:border-box
+}
+/* 页面基底，去掉浏览器默认外边距。 */
+body {
+  /* 设置元素外侧间距，auto 可居中或将用户气泡推向右侧。 */
+  margin:0
+}
+/* 为 button,textarea,input 对应的页面节点或交互状态设置样式。 */
+button,textarea,input {
+  /* 以简写统一字号、行高及字体，用于欢迎符号和其他字体声明。 */
+  font:inherit
+}
+/* 为 button 对应的页面节点或交互状态设置样式。 */
+button {
+  /* 说明元素可点击或正在等待操作完成。 */
+  cursor:pointer;
+  /* 让悬停状态平滑变化；减少动态效果偏好下会关闭。 */
+  transition:background .15s
+}
+/* 为 button:disabled 对应的页面节点或交互状态设置样式。 */
+button:disabled {
+  /* 禁用控件降低透明度，表现暂时不可操作。 */
+  opacity:.5;
+  /* 说明元素可点击或正在等待操作完成。 */
+  cursor:wait
+}
+/* 为 button:focus-visible,a:focus-visible,textarea:focus-visible,input:focus-visible 对应的页面节点或交互状态设置样式。 */
+button:focus-visible,a:focus-visible,textarea:focus-visible,input:focus-visible {
+  /* 键盘聚焦轮廓，帮助用户确认当前控件位置。 */
+  outline:3px solid #299eb3;
+  /* 将焦点轮廓与元素边框分开，提升可见性。 */
+  outline-offset:4px
+}
+/* 顶栏品牌与页面说明布局。 */
+header {
+  /* 指定高度；动态视口单位跟随可用屏幕空间变化。 */
+  height:86px;
+  /* 给页头或消息区添加下分隔线。 */
+  border-bottom:1px solid var(--line);
+  /* 选择网格、弹性、块级或隐藏展示方式。 */
+  display:flex;
+  /* 控制交叉轴对齐，让图标、标题和按钮位置一致。 */
+  align-items:center;
+  /* 控制主轴分布，保持标题与操作按钮分隔。 */
+  justify-content:space-between;
+  /* 设置内部留白，让内容与边框保持阅读距离。 */
+  padding:0 5vw;
+  /* 设置背景颜色或透明背景，区分卡片、按钮和消息角色。 */
+  background:var(--white)
+}
+/* 为 .brand 对应的页面节点或交互状态设置样式。 */
+.brand {
+  /* 选择网格、弹性、块级或隐藏展示方式。 */
+  display:flex;
+  /* 控制交叉轴对齐，让图标、标题和按钮位置一致。 */
+  align-items:center;
+  /* 设置布局子项间距，避免依赖每个子项额外 margin。 */
+  gap:12px;
+  /* 去除品牌导航的默认下划线。 */
+  text-decoration:none;
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:var(--ink);
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:23px;
+  /* 设置文字粗细，突出标题、标签或操作。 */
+  font-weight:700
+}
+/* 为 .brand-mark 对应的页面节点或交互状态设置样式。 */
+.brand-mark {
+  /* 设置背景颜色或透明背景，区分卡片、按钮和消息角色。 */
+  background:var(--accent);
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:white;
+  /* 设置圆角，区分按钮、卡片及用户气泡外观。 */
+  border-radius:12px 12px 3px 12px;
+  /* 设置内部留白，让内容与边框保持阅读距离。 */
+  padding:7px 12px
+}
+/* 为 .brand small 对应的页面节点或交互状态设置样式。 */
+.brand small {
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:13px;
+  /* 设置文字粗细，突出标题、标签或操作。 */
+  font-weight:400;
+  /* 在品牌次级名称前添加竖向分隔线。 */
+  border-left:1px solid var(--line);
+  /* 给左侧分隔线后的文字保留空间。 */
+  padding-left:14px;
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:var(--muted)
+}
+/* 为 .header-note 对应的页面节点或交互状态设置样式。 */
+.header-note {
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:13px;
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:var(--muted)
+}
+/* 资料侧栏与聊天区的主布局。 */
+main {
+  /* 限制最大宽度，避免宽屏正文或消息过长。 */
+  max-width:1480px;
+  /* 设置元素外侧间距，auto 可居中或将用户气泡推向右侧。 */
+  margin:auto;
+  /* 设置内部留白，让内容与边框保持阅读距离。 */
+  padding:34px 5vw;
+  /* 选择网格、弹性、块级或隐藏展示方式。 */
+  display:grid;
+  /* 设置桌面两栏宽度，窄屏媒体查询再改变布局。 */
+  grid-template-columns:310px minmax(0,1fr);
+  /* 设置布局子项间距，避免依赖每个子项额外 margin。 */
+  gap:38px
+}
+/* 为 .section-label 对应的页面节点或交互状态设置样式。 */
+.section-label {
+  /* 选择中文系统字体或特定标题/数字字体，按顺序回退。 */
+  font-family:"SFMono-Regular",Consolas,monospace;
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:10px;
+  /* 调整字间距，用于英文标签或标题视觉层次。 */
+  letter-spacing:2px;
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:var(--accent);
+  /* 设置文字粗细，突出标题、标签或操作。 */
+  font-weight:600
+}
+/* 为 h1 对应的页面节点或交互状态设置样式。 */
+h1 {
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:29px;
+  /* 调整字间距，用于英文标签或标题视觉层次。 */
+  letter-spacing:-1px;
+  /* 设置元素外侧间距，auto 可居中或将用户气泡推向右侧。 */
+  margin:14px 0;
+  /* 选择中文系统字体或特定标题/数字字体，按顺序回退。 */
+  font-family:"Songti SC","STSong",serif
+}
+/* 为 h2 对应的页面节点或交互状态设置样式。 */
+h2 {
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:18px;
+  /* 设置元素外侧间距，auto 可居中或将用户气泡推向右侧。 */
+  margin:0
+}
+/* 为 p 对应的页面节点或交互状态设置样式。 */
+p {
+  /* 设置行高，让中文正文和多行消息容易阅读。 */
+  line-height:1.8
+}
+/* 为 .intro 对应的页面节点或交互状态设置样式。 */
+.intro {
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:14px;
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:var(--muted);
+  /* 设置与下一块内容的竖向距离。 */
+  margin-bottom:25px
+}
+/* 为 .library-card 对应的页面节点或交互状态设置样式。 */
+.library-card {
+  /* 设置背景颜色或透明背景，区分卡片、按钮和消息角色。 */
+  background:var(--white);
+  /* 设置边框宽度、样式和颜色，勾勒控件与卡片轮廓。 */
+  border:1px solid var(--line);
+  /* 设置内部留白，让内容与边框保持阅读距离。 */
+  padding:20px;
+  /* 设置圆角，区分按钮、卡片及用户气泡外观。 */
+  border-radius:14px;
+  /* 设置与下一块内容的竖向距离。 */
+  margin-bottom:22px
+}
+/* 为 .card-title 对应的页面节点或交互状态设置样式。 */
+.card-title {
+  /* 选择网格、弹性、块级或隐藏展示方式。 */
+  display:flex;
+  /* 控制交叉轴对齐，让图标、标题和按钮位置一致。 */
+  align-items:center;
+  /* 控制主轴分布，保持标题与操作按钮分隔。 */
+  justify-content:space-between
+}
+/* 为 .badge 对应的页面节点或交互状态设置样式。 */
+.badge {
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:11px;
+  /* 设置背景颜色或透明背景，区分卡片、按钮和消息角色。 */
+  background:var(--soft);
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:var(--accent);
+  /* 设置内部留白，让内容与边框保持阅读距离。 */
+  padding:5px 9px;
+  /* 设置圆角，区分按钮、卡片及用户气泡外观。 */
+  border-radius:20px
+}
+/* 为 .badge.error 对应的页面节点或交互状态设置样式。 */
+.badge.error {
+  /* 设置背景颜色或透明背景，区分卡片、按钮和消息角色。 */
+  background:#fff0ef;
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:var(--danger)
+}
+/* 为 .library-count 对应的页面节点或交互状态设置样式。 */
+.library-count {
+  /* 选择网格、弹性、块级或隐藏展示方式。 */
+  display:flex;
+  /* 控制交叉轴对齐，让图标、标题和按钮位置一致。 */
+  align-items:baseline;
+  /* 设置布局子项间距，避免依赖每个子项额外 margin。 */
+  gap:9px;
+  /* 设置与上一块内容的竖向距离。 */
+  margin-top:17px
+}
+/* 为 .library-count strong 对应的页面节点或交互状态设置样式。 */
+.library-count strong {
+  /* 选择中文系统字体或特定标题/数字字体，按顺序回退。 */
+  font-family:Georgia,serif;
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:40px;
+  /* 设置文字粗细，突出标题、标签或操作。 */
+  font-weight:400
+}
+/* 为 .library-count span,.muted 对应的页面节点或交互状态设置样式。 */
+.library-count span,.muted {
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:12px;
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:var(--muted);
+  /* 允许长文件名、错误信息或消息在必要处换行。 */
+  overflow-wrap:anywhere
+}
+/* 为 .text-button 对应的页面节点或交互状态设置样式。 */
+.text-button {
+  /* 设置边框宽度、样式和颜色，勾勒控件与卡片轮廓。 */
+  border:0;
+  /* 设置内部留白，让内容与边框保持阅读距离。 */
+  padding:0;
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:var(--accent);
+  /* 设置背景颜色或透明背景，区分卡片、按钮和消息角色。 */
+  background:none;
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:12px
+}
+/* 为 .drop-zone 对应的页面节点或交互状态设置样式。 */
+.drop-zone {
+  /* 选择网格、弹性、块级或隐藏展示方式。 */
+  display:flex;
+  /* 控制交叉轴对齐，让图标、标题和按钮位置一致。 */
+  align-items:center;
+  /* 指定弹性子项横向或纵向排列。 */
+  flex-direction:column;
+  /* 设置布局子项间距，避免依赖每个子项额外 margin。 */
+  gap:10px;
+  /* 设置内部留白，让内容与边框保持阅读距离。 */
+  padding:22px 10px;
+  /* 设置边框宽度、样式和颜色，勾勒控件与卡片轮廓。 */
+  border:1px dashed #9bbac8;
+  /* 设置圆角，区分按钮、卡片及用户气泡外观。 */
+  border-radius:14px;
+  /* 设置背景颜色或透明背景，区分卡片、按钮和消息角色。 */
+  background:#eef5f9;
+  /* 说明元素可点击或正在等待操作完成。 */
+  cursor:pointer;
+  /* 控制内容左对齐或居中，适应上传说明和按钮。 */
+  text-align:center
+}
+/* 为 .drop-zone.dragging 对应的页面节点或交互状态设置样式。 */
+.drop-zone.dragging {
+  /* 设置背景颜色或透明背景，区分卡片、按钮和消息角色。 */
+  background:var(--soft);
+  /* 设置边框宽度、样式和颜色，勾勒控件与卡片轮廓。 */
+  border:2px solid var(--accent)
+}
+/* 为 .drop-zone strong 对应的页面节点或交互状态设置样式。 */
+.drop-zone strong {
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:14px
+}
+/* 为 .drop-zone>span:last-of-type 对应的页面节点或交互状态设置样式。 */
+.drop-zone>span:last-of-type {
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:11px;
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:var(--muted)
+}
+/* 为 .upload-icon 对应的页面节点或交互状态设置样式。 */
+.upload-icon {
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:27px;
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:var(--accent)
+}
+/* 为 input[type=file] 对应的页面节点或交互状态设置样式。 */
+input[type=file] {
+  /* 限制最大宽度，避免宽屏正文或消息过长。 */
+  max-width:100%;
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:11px;
+  /* 设置与上一块内容的竖向距离。 */
+  margin-top:4px
+}
+/* 为 .primary 对应的页面节点或交互状态设置样式。 */
+.primary {
+  /* 设置边框宽度、样式和颜色，勾勒控件与卡片轮廓。 */
+  border:0;
+  /* 设置背景颜色或透明背景，区分卡片、按钮和消息角色。 */
+  background:var(--accent);
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:white;
+  /* 设置圆角，区分按钮、卡片及用户气泡外观。 */
+  border-radius:9px;
+  /* 设置内部留白，让内容与边框保持阅读距离。 */
+  padding:11px 19px;
+  /* 设置文字粗细，突出标题、标签或操作。 */
+  font-weight:600;
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:13px
+}
+/* 为 .primary:hover 对应的页面节点或交互状态设置样式。 */
+.primary:hover {
+  /* 设置背景颜色或透明背景，区分卡片、按钮和消息角色。 */
+  background:#0c5663
+}
+/* 为 .full 对应的页面节点或交互状态设置样式。 */
+.full {
+  /* 设置元素宽度，100% 表示占满当前容器。 */
+  width:100%
+}
+/* 为 .secondary 对应的页面节点或交互状态设置样式。 */
+.secondary {
+  /* 设置背景颜色或透明背景，区分卡片、按钮和消息角色。 */
+  background:white;
+  /* 设置边框宽度、样式和颜色，勾勒控件与卡片轮廓。 */
+  border:1px solid var(--line);
+  /* 设置圆角，区分按钮、卡片及用户气泡外观。 */
+  border-radius:9px;
+  /* 设置内部留白，让内容与边框保持阅读距离。 */
+  padding:10px 14px;
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:var(--ink);
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:12px
+}
+/* 为 .secondary:hover 对应的页面节点或交互状态设置样式。 */
+.secondary:hover {
+  /* 设置背景颜色或透明背景，区分卡片、按钮和消息角色。 */
+  background:var(--soft)
+}
+/* 为 .fine-print 对应的页面节点或交互状态设置样式。 */
+.fine-print {
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:11px;
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:var(--muted)
+}
+/* 为 .feedback 对应的页面节点或交互状态设置样式。 */
+.feedback {
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:12px;
+  /* 允许长文件名、错误信息或消息在必要处换行。 */
+  overflow-wrap:anywhere;
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:var(--accent)
+}
+/* 为 .feedback:empty 对应的页面节点或交互状态设置样式。 */
+.feedback:empty {
+  /* 选择网格、弹性、块级或隐藏展示方式。 */
+  display:none
+}
+/* 为 .feedback.error 对应的页面节点或交互状态设置样式。 */
+.feedback.error {
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:var(--danger)
+}
+/* 为 .chat-panel 对应的页面节点或交互状态设置样式。 */
+.chat-panel {
+  /* 设置背景颜色或透明背景，区分卡片、按钮和消息角色。 */
+  background:var(--white);
+  /* 设置边框宽度、样式和颜色，勾勒控件与卡片轮廓。 */
+  border:1px solid var(--line);
+  /* 设置圆角，区分按钮、卡片及用户气泡外观。 */
+  border-radius:18px;
+  /* 选择网格、弹性、块级或隐藏展示方式。 */
+  display:flex;
+  /* 指定弹性子项横向或纵向排列。 */
+  flex-direction:column;
+  /* 保留面板或输入框最小高度，同时允许消息区收缩滚动。 */
+  min-height:660px;
+  /* 指定高度；动态视口单位跟随可用屏幕空间变化。 */
+  height:calc(100dvh - 155px);
+  /* 为对话面板添加轻微层次阴影。 */
+  box-shadow:0 8px 40px #19354b06;
+  /* 控制超出容器的内容是滚动还是隐藏。 */
+  overflow:hidden
+}
+/* 为 .chat-header 对应的页面节点或交互状态设置样式。 */
+.chat-header {
+  /* 设置内部留白，让内容与边框保持阅读距离。 */
+  padding:23px 28px;
+  /* 给页头或消息区添加下分隔线。 */
+  border-bottom:1px solid var(--line);
+  /* 选择网格、弹性、块级或隐藏展示方式。 */
+  display:flex;
+  /* 控制交叉轴对齐，让图标、标题和按钮位置一致。 */
+  align-items:center;
+  /* 控制主轴分布，保持标题与操作按钮分隔。 */
+  justify-content:space-between;
+  /* 设置布局子项间距，避免依赖每个子项额外 margin。 */
+  gap:12px
+}
+/* 为 .chat-header h2 对应的页面节点或交互状态设置样式。 */
+.chat-header h2 {
+  /* 设置与上一块内容的竖向距离。 */
+  margin-top:8px;
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:21px
+}
+/* 为 .messages 对应的页面节点或交互状态设置样式。 */
+.messages {
+  /* 允许消息区域伸展填满面板剩余空间。 */
+  flex:1;
+  /* 保留面板或输入框最小高度，同时允许消息区收缩滚动。 */
+  min-height:0;
+  /* 控制超出容器的内容是滚动还是隐藏。 */
+  overflow:auto;
+  /* 设置内部留白，让内容与边框保持阅读距离。 */
+  padding:25px 28px;
+  /* 消息区域滚动可平滑；减少动态效果模式会改为立即滚动。 */
+  scroll-behavior:smooth
+}
+/* 为 .welcome 对应的页面节点或交互状态设置样式。 */
+.welcome {
+  /* 设置元素外侧间距，auto 可居中或将用户气泡推向右侧。 */
+  margin:5vh auto 20px;
+  /* 限制最大宽度，避免宽屏正文或消息过长。 */
+  max-width:440px
+}
+/* 为 .conversation-symbol 对应的页面节点或交互状态设置样式。 */
+.conversation-symbol {
+  /* 以简写统一字号、行高及字体，用于欢迎符号和其他字体声明。 */
+  font:100px/1 Georgia,serif;
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:var(--accent);
+  /* 指定高度；动态视口单位跟随可用屏幕空间变化。 */
+  height:75px
+}
+/* 为 .welcome h3 对应的页面节点或交互状态设置样式。 */
+.welcome h3 {
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:25px;
+  /* 设置文字粗细，突出标题、标签或操作。 */
+  font-weight:500;
+  /* 设置元素外侧间距，auto 可居中或将用户气泡推向右侧。 */
+  margin:10px 0
+}
+/* 为 .welcome p 对应的页面节点或交互状态设置样式。 */
+.welcome p {
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:13px;
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:var(--muted)
+}
+/* 为 .suggestions 对应的页面节点或交互状态设置样式。 */
+.suggestions {
+  /* 选择网格、弹性、块级或隐藏展示方式。 */
+  display:flex;
+  /* 指定弹性子项横向或纵向排列。 */
+  flex-direction:column;
+  /* 控制交叉轴对齐，让图标、标题和按钮位置一致。 */
+  align-items:flex-start;
+  /* 设置布局子项间距，避免依赖每个子项额外 margin。 */
+  gap:10px;
+  /* 设置与上一块内容的竖向距离。 */
+  margin-top:25px
+}
+/* 为 .suggestions button 对应的页面节点或交互状态设置样式。 */
+.suggestions button {
+  /* 设置边框宽度、样式和颜色，勾勒控件与卡片轮廓。 */
+  border:1px solid var(--line);
+  /* 设置背景颜色或透明背景，区分卡片、按钮和消息角色。 */
+  background:var(--paper);
+  /* 设置圆角，区分按钮、卡片及用户气泡外观。 */
+  border-radius:8px;
+  /* 设置内部留白，让内容与边框保持阅读距离。 */
+  padding:11px 13px;
+  /* 控制内容左对齐或居中，适应上传说明和按钮。 */
+  text-align:left;
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:var(--ink);
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:12px
+}
+/* 为 .message 对应的页面节点或交互状态设置样式。 */
+.message {
+  /* 设置与下一块内容的竖向距离。 */
+  margin-bottom:24px;
+  /* 限制最大宽度，避免宽屏正文或消息过长。 */
+  max-width:95%;
+  /* 允许长文件名、错误信息或消息在必要处换行。 */
+  overflow-wrap:anywhere
+}
+/* 为 .message-label 对应的页面节点或交互状态设置样式。 */
+.message-label {
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:11px;
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:var(--muted);
+  /* 设置与下一块内容的竖向距离。 */
+  margin-bottom:8px
+}
+/* 为 .message-body 对应的页面节点或交互状态设置样式。 */
+.message-body {
+  /* 保留回答正文或执行步骤的换行，同时允许正常折行。 */
+  white-space:pre-wrap;
+  /* 设置行高，让中文正文和多行消息容易阅读。 */
+  line-height:1.85;
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:14px
+}
+/* 为 .message.user 对应的页面节点或交互状态设置样式。 */
+.message.user {
+  /* auto 用于把用户消息对齐到右侧。 */
+  margin-left:auto;
+  /* 设置背景颜色或透明背景，区分卡片、按钮和消息角色。 */
+  background:var(--soft);
+  /* 设置内部留白，让内容与边框保持阅读距离。 */
+  padding:14px 18px;
+  /* 设置圆角，区分按钮、卡片及用户气泡外观。 */
+  border-radius:14px 14px 3px 14px;
+  /* 设置元素宽度，100% 表示占满当前容器。 */
+  width:fit-content
+}
+/* 为 .message.assistant 对应的页面节点或交互状态设置样式。 */
+.message.assistant {
+  /* 设置内部留白，让内容与边框保持阅读距离。 */
+  padding:8px 0
+}
+/* 为 .message details 对应的页面节点或交互状态设置样式。 */
+.message details {
+  /* 在来源/步骤区域上方添加分隔线。 */
+  border-top:1px solid var(--line);
+  /* 设置与上一块内容的竖向距离。 */
+  margin-top:15px;
+  /* 给上分隔线后的展开内容保留距离。 */
+  padding-top:10px;
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:12px;
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:var(--muted)
+}
+/* 为 .message summary 对应的页面节点或交互状态设置样式。 */
+.message summary {
+  /* 说明元素可点击或正在等待操作完成。 */
+  cursor:pointer
+}
+/* 为 .message li 对应的页面节点或交互状态设置样式。 */
+.message li {
+  /* 设置元素外侧间距，auto 可居中或将用户气泡推向右侧。 */
+  margin:6px 0;
+  /* 保留回答正文或执行步骤的换行，同时允许正常折行。 */
+  white-space:pre-wrap
+}
+/* 为 .timing 对应的页面节点或交互状态设置样式。 */
+.timing {
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:11px;
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:var(--muted);
+  /* 设置与上一块内容的竖向距离。 */
+  margin-top:10px
+}
+/* 为 .composer-wrap 对应的页面节点或交互状态设置样式。 */
+.composer-wrap {
+  /* 设置内部留白，让内容与边框保持阅读距离。 */
+  padding:0 24px 15px
+}
+/* 为 .composer 对应的页面节点或交互状态设置样式。 */
+.composer {
+  /* 设置边框宽度、样式和颜色，勾勒控件与卡片轮廓。 */
+  border:1px solid #b9cdd7;
+  /* 设置圆角，区分按钮、卡片及用户气泡外观。 */
+  border-radius:12px;
+  /* 设置内部留白，让内容与边框保持阅读距离。 */
+  padding:12px 14px
+}
+/* 为 .composer:focus-within 对应的页面节点或交互状态设置样式。 */
+.composer:focus-within {
+  /* 在聚焦或拖放状态修改边框色，说明当前交互目标。 */
+  border-color:var(--accent)
+}
+/* 多行问题输入的尺寸与视觉样式。 */
+textarea {
+  /* 设置元素宽度，100% 表示占满当前容器。 */
+  width:100%;
+  /* 文本框允许纵向拖动调整，不破坏水平布局。 */
+  resize:vertical;
+  /* 限制输入框或面板最大高度，避免挤占全部屏幕。 */
+  max-height:180px;
+  /* 保留面板或输入框最小高度，同时允许消息区收缩滚动。 */
+  min-height:55px;
+  /* 设置边框宽度、样式和颜色，勾勒控件与卡片轮廓。 */
+  border:0;
+  /* 设置背景颜色或透明背景，区分卡片、按钮和消息角色。 */
+  background:transparent;
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:var(--ink);
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:14px;
+  /* 设置行高，让中文正文和多行消息容易阅读。 */
+  line-height:1.7
+}
+/* 为 textarea:focus-visible 对应的页面节点或交互状态设置样式。 */
+textarea:focus-visible {
+  /* 键盘聚焦轮廓，帮助用户确认当前控件位置。 */
+  outline:0
+}
+/* 为 .composer-bottom 对应的页面节点或交互状态设置样式。 */
+.composer-bottom {
+  /* 选择网格、弹性、块级或隐藏展示方式。 */
+  display:flex;
+  /* 控制交叉轴对齐，让图标、标题和按钮位置一致。 */
+  align-items:center;
+  /* 控制主轴分布，保持标题与操作按钮分隔。 */
+  justify-content:space-between;
+  /* 设置布局子项间距，避免依赖每个子项额外 margin。 */
+  gap:8px
+}
+/* 为 .composer-bottom span,.disclaimer 对应的页面节点或交互状态设置样式。 */
+.composer-bottom span,.disclaimer {
+  /* 设置字号，区分标题、正文与辅助信息。 */
+  font-size:10px;
+  /* 设置当前元素前景色，主题变量保持同类信息配色一致。 */
+  color:var(--muted)
+}
+/* 为 .disclaimer 对应的页面节点或交互状态设置样式。 */
+.disclaimer {
+  /* 控制内容左对齐或居中，适应上传说明和按钮。 */
+  text-align:center;
+  /* 设置与下一块内容的竖向距离。 */
+  margin-bottom:0
+}
+/* 可访问标签只供屏幕朗读器使用，不作为可见占位文本。 */
+.sr-only {
+  /* 为仅屏幕朗读的标签使用绝对定位，避免占据可见布局。 */
+  position:absolute;
+  /* 设置元素宽度，100% 表示占满当前容器。 */
+  width:1px;
+  /* 指定高度；动态视口单位跟随可用屏幕空间变化。 */
+  height:1px;
+  /* 控制超出容器的内容是滚动还是隐藏。 */
+  overflow:hidden;
+  /* 把辅助标签裁剪出视觉范围，仍保留给屏幕朗读器。 */
+  clip:rect(0,0,0,0)
+}
+/* 在指定窄屏宽度下调整栏宽、间距和面板高度。 */
+@media(max-width:900px) {
+  /* 资料侧栏与聊天区的主布局。 */
+  main {
+    /* 设置桌面两栏宽度，窄屏媒体查询再改变布局。 */
+    grid-template-columns:260px minmax(0,1fr);
+    /* 设置布局子项间距，避免依赖每个子项额外 margin。 */
+    gap:20px;
+    /* 设置内部留白，让内容与边框保持阅读距离。 */
+    padding:24px
+  }
+  /* 为 .header-note 对应的页面节点或交互状态设置样式。 */
+  .header-note {
+    /* 选择网格、弹性、块级或隐藏展示方式。 */
+    display:none
+  }
+  /* 为 .chat-header,.messages 对应的页面节点或交互状态设置样式。 */
+  .chat-header,.messages {
+    /* 设置内部留白，让内容与边框保持阅读距离。 */
+    padding:20px
+  }
+  /* 为 .composer-bottom span 对应的页面节点或交互状态设置样式。 */
+  .composer-bottom span {
+    /* 设置字号，区分标题、正文与辅助信息。 */
+    font-size:9px
+  }
+}
+/* 在指定窄屏宽度下调整栏宽、间距和面板高度。 */
+@media(max-width:680px) {
+  /* 顶栏品牌与页面说明布局。 */
+  header {
+    /* 指定高度；动态视口单位跟随可用屏幕空间变化。 */
+    height:72px;
+    /* 设置内部留白，让内容与边框保持阅读距离。 */
+    padding:0 20px
+  }
+  /* 为 .brand small 对应的页面节点或交互状态设置样式。 */
+  .brand small {
+    /* 设置字号，区分标题、正文与辅助信息。 */
+    font-size:11px
+  }
+  /* 资料侧栏与聊天区的主布局。 */
+  main {
+    /* 选择网格、弹性、块级或隐藏展示方式。 */
+    display:block;
+    /* 设置内部留白，让内容与边框保持阅读距离。 */
+    padding:22px 16px
+  }
+  /* 为 aside 对应的页面节点或交互状态设置样式。 */
+  aside {
+    /* 设置与下一块内容的竖向距离。 */
+    margin-bottom:26px
+  }
+  /* 为 h1 对应的页面节点或交互状态设置样式。 */
+  h1 {
+    /* 设置字号，区分标题、正文与辅助信息。 */
+    font-size:26px
+  }
+  /* 为 .chat-panel 对应的页面节点或交互状态设置样式。 */
+  .chat-panel {
+    /* 指定高度；动态视口单位跟随可用屏幕空间变化。 */
+    height:720px;
+    /* 保留面板或输入框最小高度，同时允许消息区收缩滚动。 */
+    min-height:560px;
+    /* 限制输入框或面板最大高度，避免挤占全部屏幕。 */
+    max-height:95dvh
+  }
+  /* 为 .welcome 对应的页面节点或交互状态设置样式。 */
+  .welcome {
+    /* 设置与上一块内容的竖向距离。 */
+    margin-top:20px
+  }
+  /* 为 .composer-wrap 对应的页面节点或交互状态设置样式。 */
+  .composer-wrap {
+    /* 设置内部留白，让内容与边框保持阅读距离。 */
+    padding:0 15px 14px
+  }
+}
+/* 尊重减少动态效果的系统偏好，关闭平滑滚动和过渡。 */
+@media(prefers-reduced-motion:reduce) {
+  /* 所有元素统一尺寸计算，移动偏好规则中也可统一关闭动画。 */
+  * {
+    /* 消息区域滚动可平滑；减少动态效果模式会改为立即滚动。 */
+    scroll-behavior:auto!important;
+    /* 让悬停状态平滑变化；减少动态效果偏好下会关闭。 */
+    transition:none!important
+  }
+}

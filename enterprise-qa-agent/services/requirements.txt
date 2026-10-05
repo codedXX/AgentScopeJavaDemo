@@ -1,0 +1,8 @@
+# FAISS 原生 CPU 索引与序列化库，固定为已验证版本。
+faiss-cpu==1.12.0
+# 提供 float32 矩阵、归一化辅助检查与无 pickle 的 NPZ 快照。
+numpy==2.2.6
+# 把索引重建、写入、发布、计数及检索暴露为 HTTP API。
+fastapi==0.115.12
+# 运行 FastAPI 的 ASGI 服务器，接收 Java 侧 HTTP 请求。
+uvicorn==0.34.2

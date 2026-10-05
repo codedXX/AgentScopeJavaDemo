@@ -1,0 +1,121 @@
+# Spring Boot 公共设置，两个运行 profile 都继承本文件。
+spring:
+  # 启动时读取项目根目录的本地配置；app 和 mcp-server 共用。
+  config:
+    import: optional:file:./application-local.yml
+  # 定义应用身份，日志与服务诊断会使用它。
+  application:
+    # 本扩展项目的应用名，与原销售 Demo 区分。
+    name: enterprise-qa-agent
+  # 控制默认启用哪一组 Spring Bean 和 HTTP 接口。
+  profiles:
+    # 未传 --spring.profiles.active 时按问答 app 模式启动。
+    default: app
+# 所有运行模式共用的 HTTP 监听设置。
+server:
+  # 只监听本机地址，其他电脑不能直接访问本地演示服务。
+  address: 127.0.0.1
+# 绑定到 DemoProperties 的模型、RAG、Milvus、MCP 与仓库参数。
+demo:
+  # 百炼生成、向量化和重排序所需配置。
+  bailian:
+    # 可在 application-local.yml 中填写 Key；未覆盖时从环境读取。
+    api-key: ${DASHSCOPE_API_KEY:}
+    # 允许替换百炼 API 地址；AgentScope 与 SDK 会按各自约定处理 api/v1 前缀。
+    base-url: ${DASHSCOPE_BASE_URL:https://dashscope.aliyuncs.com/api/v1}
+    # 用于路由、改写、计划和最终回答的生成模型名称。
+    chat-model: qwen3.7-flash
+    # 文档、语义边界及查询向量统一使用此 Embedding 模型。
+    embedding-model: qwen3.7-text-embedding
+    # 针对问题与候选正文重新打分的 Rerank 模型。
+    rerank-model: qwen3.7-text-rerank
+    # 文档和查询向量必须都为 1024 维；更改维度需重新建库。
+    dimension: 1024
+    # 百炼 SDK 单次调用的超时秒数，避免外部请求无限等待。
+    timeout-seconds: 20
+  # 文档切分和两路召回的基础参数。
+  rag:
+    # 读取原始 UTF-8 文档的目录，上传文档也保存到它下面。
+    knowledge-dir: ./knowledge
+    # 按向量后端区分 Lucene 与 manifest 目录，避免切换后端混用索引。
+    index-dir: ./data/${VECTOR_BACKEND:milvus}/lucene
+    # 子块目标最大字符数，递归分割优先保留段落与句子边界。
+    chunk-size: 500
+    # 相邻子块重叠 80 字符，降低恰好跨边界的信息丢失。
+    overlap: 80
+    # 每个 BM25 或向量召回列表最多先取 10 条。
+    recall-top-k: 10
+    # Rerank 最终保留 5 条，再回溯父文档供回答使用。
+    final-top-k: 5
+    # 不设置 min-rerank-score：相关性分数不是正确率，需要标注样例校准。
+  # 默认向量后端 Milvus 的连接与 collection 参数。
+  milvus:
+    # 本项目使用 19540，避开原 Demo 的 19530；可通过环境覆盖。
+    uri: ${MILVUS_URI:http://localhost:19540}
+    # 可选 Milvus 认证令牌；本地未启用认证时留空。
+    token: ${MILVUS_TOKEN:}
+    # 重建只替换此项目的 collection，不使用原 Demo 的 sales_knowledge。
+    collection: enterprise_knowledge
+  # AgentScope MCP 客户端与业务工具的访问地址。
+  mcp:
+    # Streamable HTTP 的 MCP 协议入口，客户端在这里初始化和发现工具。
+    url: http://127.0.0.1:8181/mcp
+    # 价格库存工具通过 HTTP 回调业务接口的根地址。
+    business-url: http://127.0.0.1:8181
+  # GitHub API 与访问凭证，用于读取已配置仓库。
+  github:
+    # GitHub REST API 的根地址，工具在其下请求仓库、树和文件。
+    api-url: https://api.github.com
+    # 可选授权令牌，提高额度或读取授权私有仓库；不把真实值写入 YAML。
+    token: ${GITHUB_TOKEN:}
+# 框架日志级别设置。
+logging:
+  # 按包名控制日志详细程度。
+  level:
+    # 默认只输出 AgentScope 警告及错误，减少逐步工具日志噪声。
+    io.agentscope: WARN
+
+# 绑定到 EnterpriseProperties 的扩展能力配置。
+enterprise:
+  # MCP 检索与 SQL 工具通过此地址访问 app，避免两个进程直接写同一索引。
+  app-url: ${APP_URL:http://127.0.0.1:8180}
+  # 限定可读取的 owner/repository，工具不接受用户提供的任意仓库 URL。
+  github-repository: ${GITHUB_REPOSITORY:codedXX/redis-cache-demo}
+  # 选择 milvus、pgvector 或 faiss，对应 RagConfiguration 的实际存储适配器。
+  vector-backend: ${VECTOR_BACKEND:milvus}
+  # PGVector JDBC 地址，对应 compose.backends.yaml 中 55432 端口。
+  pg-url: ${PGVECTOR_URL:jdbc:postgresql://localhost:55432/enterprise}
+  # PGVector 连接用户；演示容器默认 enterprise。
+  pg-user: ${PGVECTOR_USER:enterprise}
+  # 从环境覆盖数据库密码，默认值仅用于本地演示。
+  pg-password: ${PGVECTOR_PASSWORD:local-demo-password}
+  # Java 向量适配器调用的 FAISS HTTP 服务地址。
+  faiss-url: ${FAISS_URL:http://127.0.0.1:8182}
+  # 按后端保存父子映射与父块正文，用于重启恢复及召回扩展。
+  parent-file: ./data/${VECTOR_BACKEND:milvus}/parents.json
+  # 父块最多约 1600 字符，给子块命中补充更完整上下文。
+  parent-size: 1600
+  # 默认启用相邻语句组 Embedding 相似度分块，关闭后回退递归切分。
+  semantic-chunking-enabled: ${SEMANTIC_CHUNKING_ENABLED:true}
+  # 相邻语句组余弦相似度低于 0.72 且达到最小长度时划分新父块。
+  semantic-threshold: 0.72
+  # RRF 使用 1/(60+rank)，平滑单路前几名对融合结果的影响。
+  rrf-k: 60
+  # 融合候选最多保留 30 条，控制后续 Rerank 输入规模。
+  fusion-top-k: 30
+  # 是否生成假设文档用于向量召回；假设本身不会成为回答证据。
+  hyde-enabled: ${HYDE_ENABLED:true}
+  # 检索结果缓存 60 秒，缓存 key 同时包含知识清单版本。
+  cache-seconds: 60
+  # 会话近期历史与摘要保存目录，采用哈希文件名和原子替换。
+  session-dir: ./data/sessions
+  # 业务查询生成的 XLSX 文件保存目录。
+  export-dir: ./data/exports
+  # 文件型 H2 演示库；启动时设置 PostgreSQL 兼容模式及小写标识符。
+  business-jdbc-url: jdbc:h2:file:./data/business;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
+  # 业务查询账号，仅获 products/sales 的 SELECT 权限。
+  business-user: enterprise_reader
+  # 只读账号密码允许通过环境覆盖，示例默认值不代表生产凭证。
+  business-password: ${BUSINESS_READER_PASSWORD:local-reader-password}
+  # 复合问题启用模型计划、依赖校验与逐步执行。
+  planning-enabled: true
