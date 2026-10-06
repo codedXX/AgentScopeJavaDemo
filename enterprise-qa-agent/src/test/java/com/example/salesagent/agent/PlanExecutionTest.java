@@ -101,7 +101,7 @@ class PlanExecutionTest {
         var config=mock(EnterpriseProperties.class);when(config.planningEnabled()).thenReturn(true);
         // 使用完整生产构造器装配 Agent、工具、计划、模型替身和持久化存储。
         var assistant=new SalesAssistant(retriever,models,mcp,mapper,store,planner,llm,data,config);
-        // 执行端到端断言后在 finally 停止线程池与本地模型服务。
+        // 执行端到端断言后在 finally 停止本地模型服务。
         try {
             // 以固定会话 ID 提交知识与统计组成的复合问题。
             var result=assistant.chat(new ChatRequest("one","先介绍产品A，再统计华东销售额"));
@@ -115,7 +115,7 @@ class PlanExecutionTest {
             assertEquals(2,new PersistentConversationStore(temp.resolve("sessions")).load("one").turns().size());
             // 断言导出目录恰好生成一个 Excel 文件，并自动关闭目录流。
             try(var files=java.nio.file.Files.list(temp.resolve("exports"))){assertEquals(1,files.count());}
-        // 无论断言成败都停止问答线程池和 HTTP 模型替身，避免资源泄漏。
-        }finally {assistant.close();server.stop(0);}
+        // 无论断言成败都停止 HTTP 模型替身，避免端口占用。
+        }finally {server.stop(0);}
     }
 }

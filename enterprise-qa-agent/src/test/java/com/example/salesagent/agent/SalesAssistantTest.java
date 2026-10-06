@@ -97,7 +97,7 @@ class SalesAssistantTest {
                 new KnowledgeChunk("A", "每袋蛋白质15克", "products.md", 0), .9, "rerank")), false, 10));
         // 使用基础构造器创建仅内存会话的问答助手。
         var assistant = new SalesAssistant(retriever, model, mcp, mapper);
-        // 将问答断言放在资源清理边界内，保证模型服务器和执行器关闭。
+        // 将问答断言放在资源清理边界内，保证本地模型服务器关闭。
         try {
             // 第一轮问题加入独特标记，方便追踪后续分类历史的传播。
             var first = assistant.chat(new ChatRequest("one", "独特问题标记：产品A的蛋白质含量？"));
@@ -113,8 +113,8 @@ class SalesAssistantTest {
             assertTrue(routerInputs.get(1).contains("独特问题标记"));
             // 断言另一个会话的分类上下文没有第一会话的标记。
             assertFalse(routerInputs.get(2).contains("独特问题标记"));
-        // 测试结束或失败时关闭问答线程池，并停止本地模型服务器。
-        } finally { assistant.close(); server.stop(0); }
+        // 测试结束或失败时停止本地模型服务器。
+        } finally { server.stop(0); }
     }
     // 第二个测试也使用泛型 ObjectProvider 替身，屏蔽未检查类型警告。
     @SuppressWarnings("unchecked")
@@ -218,7 +218,7 @@ class SalesAssistantTest {
         var retriever = mock(HybridRetriever.class);
         // 创建生产问答助手，让其真实注册与执行 MCP 工具。
         var assistant = new SalesAssistant(retriever, model, mcp, mapper);
-        // 将仓库工具验证放在资源清理边界内，防止失败测试遗留工作线程。
+        // 将仓库工具验证放在资源清理边界内，保证本地模型服务器关闭。
         try {
             // 提出仓库 README 问题，触发 REPOSITORY 路由和工具循环。
             var result = assistant.chat(new ChatRequest("repository", "读取仓库 README"));
@@ -234,8 +234,8 @@ class SalesAssistantTest {
             verify(client).callTool("listRepositoryFiles", Map.of());
             // 验证检索器从未被调用，仓库问题通过工具取得证据。
             verifyNoInteractions(retriever);
-        // 无论测试是否成功，都停止问答执行器与 HTTP 服务器。
-        } finally { assistant.close(); server.stop(0); }
+        // 无论测试是否成功，都停止本地 HTTP 模型服务器。
+        } finally { server.stop(0); }
     }
 
 }

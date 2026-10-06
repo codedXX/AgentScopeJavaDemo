@@ -19,14 +19,10 @@ import io.agentscope.core.model.DashScopeChatModel;
 import io.agentscope.core.tool.Toolkit;
 // McpClientWrapper 将 MCP 服务工具接入 AgentScope。
 import io.agentscope.core.tool.mcp.McpClientWrapper;
-// PreDestroy 在 Spring 关闭组件时触发资源清理。
-import jakarta.annotation.PreDestroy;
 // Duration 为分类、工具注册和模型生成设置等待时限。
 import java.time.Duration;
 // 引入有序列表、集合、映射、UUID 等会话与证据数据结构。
 import java.util.*;
-// 引入执行器、Future、超时和执行异常类型。
-import java.util.concurrent.*;
 // ObjectProvider 延迟取得模型和 MCP 客户端，避免启动时触发连接。
 import org.springframework.beans.factory.ObjectProvider;
 // Profile 控制组件只在问答应用模式中创建。
@@ -93,10 +89,8 @@ public class SalesAssistant {
     private final ObjectProvider<McpClientWrapper> mcp;
     // JSON 映射器交给 ToolTrace 解析工具返回结果。
     private final ObjectMapper mapper;
-    // 会话注册表隔离每个 State，并防止同一会话并发修改。
-    private final SessionRegistry<State> sessions;
-    // 每个问答任务使用虚拟线程执行，以便在总时限到达时取消。
-    private final ExecutorService workers = Executors.newVirtualThreadPerTaskExecutor();
+    // 进程内的 State 注册表，按会话 ID 隔离并互斥；不是 HTTP Session，也不是落盘历史。
+    private final SessionRegistry<State> stateRegistry;
 
     // 基础构造器保留给独立测试或仅使用内存会话的调用方。
     public SalesAssistant(HybridRetriever retriever, ObjectProvider<DashScopeChatModel> model,
@@ -111,7 +105,7 @@ public class SalesAssistant {
         // 保留共享 JSON 映射器供会话工具 Hook 使用。
         this.mapper = mapper;
         // 使用 createState 创建独立会话状态，最多 100 个会话、闲置 30 分钟过期。
-        sessions = new SessionRegistry<>(this::createState, 100, Duration.ofMinutes(30));
+        stateRegistry = new SessionRegistry<>(this::createState, 100, Duration.ofMinutes(30));
     }
     // 可选的本地持久化存储，用于恢复会话摘要与最近消息。
     private PersistentConversationStore conversations;
@@ -166,7 +160,7 @@ public class SalesAssistant {
         // 保留 Agent 构建后真正使用的 Toolkit，使动态 MCP 注册进入执行实例。
         return new State(agent, memory, trace, agent.getToolkit());
     }
-    // 对外问答入口：安全检查后，把完整任务提交给有总时限的工作线程。
+    // 对外问答入口：安全检查后，在当前线程取得会话并执行。
     public ChatResponse chat(ChatRequest request) {
         // 缺少 sessionId 时生成 UUID，否则沿用客户端提供的会话 ID。
         String id = request.sessionId() == null ? UUID.randomUUID().toString() : request.sessionId();
@@ -176,37 +170,8 @@ public class SalesAssistant {
         String rejection = guard.rejection(request.message());
         // 被拦截时立即返回固定解释和拦截步骤，不访问模型或工具。
         if (rejection != null) return new ChatResponse(id,rejection,List.of(),List.of("敏感问题拦截"),0,0);
-        // 总时限覆盖检索、重试、工具循环；超时取消工作，锁由工作线程退出时释放。
-        // 在线程内取得当前会话独占访问权，再执行检索、模型及历史更新。
-        var future = workers.submit(() -> sessions.withSession(id, session -> run(id, request.message(), session.value(), started)));
-        // 主线程最多等待 180 秒，覆盖本轮问答全部阶段。
-        try {
-            // 等待完整问答任务，超过三分钟则进入超时分支。
-            return future.get(180, TimeUnit.SECONDS);
-        }
-        // 超过总时限则中断工作 Future，并报告问答已取消。
-        catch (TimeoutException ex) {
-            // 请求中断工作线程，停止后续检索和工具执行。
-            future.cancel(true);
-            // 向 HTTP 调用方报告固定总时限错误。
-            throw new IllegalStateException("问答超过180秒，已取消，请稍后重试");
-        }
-        // 调用线程被中断时取消工作、恢复中断标记并向上报告取消。
-        catch (InterruptedException ex) {
-            // 上层取消请求时也中断问答任务。
-            future.cancel(true);
-            // InterruptedException 会清除中断标记，这里将其恢复。
-            Thread.currentThread().interrupt();
-            // 返回固定取消说明。
-            throw new IllegalStateException("问答已取消");
-        }
-        // 工作线程异常被 Future 包装为 ExecutionException，此处恢复实际原因。
-        catch (ExecutionException ex) {
-            // 运行时异常保持原类型和原信息，便于上层统一处理。
-            if (ex.getCause() instanceof RuntimeException runtime) throw runtime;
-            // 非运行时异常统一包装为问答失败，同时保留底层原因。
-            throw new IllegalStateException("问答失败", ex.getCause());
-        }
+        // 取得当前会话独占访问权，再执行检索、模型及历史更新。
+        return stateRegistry.withSession(id, session -> run(id, request.message(), session.value(), started));
     }
     // 在同会话锁保护下执行普通问答，started 包含排队与前置检查耗时。
     private ChatResponse run(String id, String message, State state, long started) {
@@ -575,13 +540,6 @@ public class SalesAssistant {
     private static Msg user(String text) {
         // 固定消息名称和 USER 角色，仅正文由调用方提供。
         return Msg.builder().name("user").role(MsgRole.USER).textContent(text).build();
-    }
-    // Spring 销毁服务时立即停止虚拟线程执行器，取消尚在执行的任务。
-    @PreDestroy
-    // 关闭应用时释放任务执行资源。
-    public void close() {
-        // 立即请求中断尚在执行的虚拟线程任务。
-        workers.shutdownNow();
     }
     // State 将一个会话的 Agent、记忆、工具记录和历史集中隔离。
     private static class State {
