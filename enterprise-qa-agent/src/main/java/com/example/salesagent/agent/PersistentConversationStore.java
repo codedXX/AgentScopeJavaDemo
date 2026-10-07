@@ -18,7 +18,13 @@ public final class PersistentConversationStore {
             // 消息角色为 user 或 assistant。
             String role,
             // 保存原始问题或最终回答的文本。
-            String text) {}
+            String text,
+            List<String> imageIds) {
+        public Turn {
+            imageIds = imageIds == null ? List.of() : List.copyOf(imageIds);
+        }
+        public Turn(String role, String text) { this(role, text, List.of()); }
+    }
     // 一个会话文件包含压缩摘要和近期完整轮次。
     public record Conversation(
             // 已压缩的早期历史摘要。

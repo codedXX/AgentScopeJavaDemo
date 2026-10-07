@@ -17,7 +17,7 @@
 --><link rel="stylesheet" href="/styles.css">
   <!--
 defer 让脚本在 HTML 解析后执行，绑定事件时节点已经存在。
---><script src="/app.js" defer></script>
+--><script src="/app.js?v=20261007-pdf" defer></script>
 </head>
 <!--
 可见工作台内容的根容器。
@@ -81,9 +81,9 @@ defer 让脚本在 HTML 解析后执行，绑定事件时节点已经存在。
 强调知识片段数量或上传操作提示。
 --><strong>选择或拖入一份资料</strong><!--
 内联展示徽标、图标或提示；aria-hidden 的装饰内容不参与朗读。
---><span>TXT / Markdown · UTF-8 · 最大 5 MB</span><!--
-限制选择 TXT/MD 的文件控件，后台仍验证 UTF-8、大小和扩展名。
---><input id="file" name="file" type="file" accept=".txt,.md" required></label>
+--><span>PDF / Markdown · 最大 5 MB</span><!--
+限制选择 PDF/MD 的文件控件，后台仍提取正文并验证大小和扩展名。
+--><input id="file" name="file" type="file" accept=".pdf,.md" required></label>
       <!--
 展示当前待上传文件名与大小。
 --><p id="selected-file" class="muted">尚未选择文件</p>
@@ -98,7 +98,7 @@ defer 让脚本在 HTML 解析后执行，绑定事件时节点已经存在。
 --><p id="upload-feedback" class="feedback" role="status" aria-live="polite"></p>
     <!--
 展示说明或反馈文本，部分节点由 JavaScript 实时更新。
---><p class="fine-print">上传后将重新索引全部资料，期间知识检索暂不可用。同名文件会独立保存。</p>
+--><p class="fine-print">PDF 须包含可提取文字，扫描版请先进行 OCR；Markdown 须使用 UTF-8 编码。上传后将重新索引全部资料，期间知识检索暂不可用。同名文件会独立保存。</p>
     <!--
 重新处理已有资料，用于文件保存后索引失败的重试。
 --><button id="rebuild" class="secondary full" type="button">重建知识库 / 失败后重试</button>
@@ -180,11 +180,13 @@ defer 让脚本在 HTML 解析后执行，绑定事件时节点已经存在。
 关联输入框的可访问名称；点击标签也可激活对应控件。
 --><label class="sr-only" for="question">输入问题</label><!--
 最长 2000 字的问答输入框，Shift+Enter 可换行。
---><textarea id="question" placeholder="输入你的问题…" maxlength="2000" rows="2" required></textarea><!--
+--><textarea id="question" placeholder="输入问题，或粘贴、拖入图片…" maxlength="2000" rows="2"></textarea>
+<div id="image-previews" class="image-previews" aria-label="待发送图片" hidden></div>
+<input id="chat-images" class="sr-only" type="file" accept="image/png,image/jpeg" multiple aria-label="选择提问图片"><!--
 用于分组和布局，class 与样式表中的同名选择器对应。
 --><div class="composer-bottom"><!--
 内联展示徽标、图标或提示；aria-hidden 的装饰内容不参与朗读。
---><span>Enter 发送 · Shift + Enter 换行</span><!--
+--><div class="composer-actions"><button id="choose-images" class="secondary" type="button">＋ 图片</button><span>最多 4 张 · PNG/JPEG · 每张 5 MB</span></div><!--
 向 /api/chat 提交本轮问题，问答或重建过程中禁用。
 --><button id="send" class="primary" type="submit">发送 ↑</button></div></form><!--
 展示说明或反馈文本，部分节点由 JavaScript 实时更新。

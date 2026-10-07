@@ -4,6 +4,13 @@ server:
   port: 8085
 # app 模式下的 Spring Web 配置。
 spring:
+  # 静态工作台更新后重新获取资源，避免旧脚本仍按 TXT 校验上传。
+  web:
+    resources:
+      cache:
+        cachecontrol:
+          no-store: true
+        use-last-modified: false
   # Servlet 容器接收 HTTP 文件上传的设置。
   servlet:
     # 限制 multipart 上传，防止单次请求占用过多内存。

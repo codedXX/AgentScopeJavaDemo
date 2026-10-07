@@ -1,0 +1,29 @@
+{
+  "samples": 10,
+  "failures": 0,
+  "label_coverage": 0.0,
+  "first_answer_accuracy": null,
+  "recall_at_k": 1.0,
+  "mrr": 1.0,
+  "faithfulness": 1.0,
+  "retrieval_mean_ms": 2806.2,
+  "retrieval_p95_ms": 3726,
+  "latency_sample_count": 10,
+  "targets": {
+    "first_answer_accuracy": 0.85,
+    "retrieval_mean_ms": 2000
+  },
+  "units": [
+    "source"
+  ],
+  "retrieval_by_unit": {
+    "source": {
+      "recall_at_k": 1.0,
+      "mrr": 1.0
+    }
+  },
+  "run": {
+    "hyDe_note": "HyDE/改写包含在retrievalMs；缓存可能影响延迟，比较配置需重启并固定样本顺序。",
+    "k": 5
+  }
+}

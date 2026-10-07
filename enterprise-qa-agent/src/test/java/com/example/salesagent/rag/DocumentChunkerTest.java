@@ -50,8 +50,8 @@ class DocumentChunkerTest {
     @Test
     // 验证只含空白符的文件不会进入知识索引。
     void blankDocumentProducesNoChunks() throws Exception {
-        // 准备空白纯文本文件路径。
-        Path file = tempDir.resolve("blank.txt");
+        // 准备空白 Markdown 文件路径。
+        Path file = tempDir.resolve("blank.md");
         // 写入空格、Windows 换行和制表符，覆盖清洗后的空白场景。
         Files.writeString(file, " \r\n\t\n ");
 
@@ -64,9 +64,9 @@ class DocumentChunkerTest {
     // 验证分块 ID 可重复，并且不同来源的相同正文不会碰撞。
     void chunkIdsAreStableButIncludeSource() throws Exception {
         // 准备第一份知识文件的来源路径。
-        Path first = tempDir.resolve("a.txt");
+        Path first = tempDir.resolve("a.md");
         // 准备第二份内容相同但来源不同的文件路径。
-        Path second = tempDir.resolve("b.txt");
+        Path second = tempDir.resolve("b.md");
         // 向第一份文件写入测试正文。
         Files.writeString(first, "相同的演示内容");
         // 向第二份文件写入完全相同的正文。

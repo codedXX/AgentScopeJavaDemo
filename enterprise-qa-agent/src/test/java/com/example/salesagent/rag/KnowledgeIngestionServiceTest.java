@@ -170,16 +170,20 @@ class KnowledgeIngestionServiceTest {
         // 先发布可用索引，作为验证非法输入无副作用的基准。
         service.rebuild();
         // 遍历路径穿越、路径分隔符、不支持格式和控制字符等非法名称。
-        for (String name : List.of("../escape.txt", "a/b.md", "a\\b.md", "file.pdf", "bad\n.txt")) {
+        for (String name : List.of("../escape.pdf", "a/b.md", "a\\b.md", "file.txt", "bad\n.pdf")) {
             // 断言每个非法名称均在上传验证阶段抛出参数异常。
             assertThrows(IllegalArgumentException.class, () -> service.upload(name, new byte[]{65}));
         }
         // 断言零字节正文被拒绝。
-        assertThrows(IllegalArgumentException.class, () -> service.upload("a.txt", new byte[0]));
+        assertThrows(IllegalArgumentException.class, () -> service.upload("a.pdf", new byte[0]));
         // 断言非法 UTF-8 字节序列被拒绝。
-        assertThrows(IllegalArgumentException.class, () -> service.upload("a.txt", new byte[]{(byte) 0xff}));
+        assertThrows(IllegalArgumentException.class, () -> service.upload("a.md", new byte[]{(byte) 0xff}));
         // 断言超过 5 MiB 的上传被拒绝。
-        assertThrows(IllegalArgumentException.class, () -> service.upload("a.txt", new byte[5 * 1024 * 1024 + 1]));
+        assertThrows(IllegalArgumentException.class, () -> service.upload("a.pdf", new byte[5 * 1024 * 1024 + 1]));
+        for (byte[] pdf : List.of(new byte[]{65}, "%PDF-1.7\ninvalid".getBytes(java.nio.charset.StandardCharsets.US_ASCII),
+                PdfTestDocuments.text(""), PdfTestDocuments.encrypted("secret"), PdfTestDocuments.encrypted(""))) {
+            assertThrows(IllegalArgumentException.class, () -> service.upload("invalid.pdf", pdf));
+        }
         // 断言所有非法输入之后旧索引仍然就绪。
         assertTrue(service.isReady());
         // 断言原来的一条知识没有被添加或删除。
@@ -201,7 +205,7 @@ class KnowledgeIngestionServiceTest {
         // 使用正常关键词替身和故障向量替身构造服务。
         KnowledgeIngestionService service = service(knowledge, new FakeWritableKeyword(), vector);
         // 断言首次上传后的建库失败，但上传正文已保存到知识目录。
-        assertThrows(IllegalStateException.class, () -> service.upload("new.txt", "新增知识".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        assertThrows(IllegalStateException.class, () -> service.upload("new.pdf", PdfTestDocuments.text("New product details")));
         // 断言失败期间知识库不可查询。
         assertFalse(service.isReady());
         // 关闭模拟故障，代表远程向量服务恢复。
@@ -210,6 +214,39 @@ class KnowledgeIngestionServiceTest {
         assertEquals(1, service.rebuild().chunkCount());
         // 断言重试成功后知识库恢复就绪。
         assertTrue(service.isReady());
+    }
+
+    @Test
+    void pdfUploadAndRebuildPreserveOriginalFileAndExtractBothPages() throws Exception {
+        Path knowledge = Files.createDirectories(tempDir.resolve("knowledge"));
+        Files.writeString(knowledge.resolve("existing.md"), "现有资料");
+        Files.writeString(knowledge.resolve("ignored.txt"), "不再摄取的旧 TXT");
+        var keyword = new FakeWritableKeyword();
+        var vector = new FakeWritableVector();
+        var embedded = new ArrayList<String>();
+        var service = new KnowledgeIngestionService(new DocumentChunker(knowledge, 100, 10), keyword, vector,
+                texts -> { embedded.clear(); embedded.addAll(texts); return texts.stream().map(t -> new float[]{1, 2}).toList(); },
+                knowledge, tempDir.resolve("index"), 2);
+        byte[] pdf = PdfTestDocuments.text("Product warranty is two years.", "Contact support for repairs.");
+
+        var uploaded = service.upload("product.PDF", pdf);
+        assertTrue(uploaded.ready());
+        assertTrue(String.join("\n", embedded).contains("Product warranty is two years."));
+        assertTrue(String.join("\n", embedded).contains("Contact support for repairs."));
+        assertTrue(embedded.contains("现有资料"));
+        assertFalse(String.join("\n", embedded).contains("旧 TXT"));
+        assertEquals(keyword.ids, vector.ids);
+        Path saved;
+        try (var paths = Files.walk(knowledge.resolve("uploads"))) {
+            saved = paths.filter(Files::isRegularFile).findFirst().orElseThrow();
+        }
+        assertArrayEquals(pdf, Files.readAllBytes(saved));
+        var chunks = new DocumentChunker(knowledge, 100, 10).split(saved);
+        assertTrue(chunks.stream().allMatch(c -> c.source().endsWith("/product.PDF")));
+        var ids = Set.copyOf(keyword.ids);
+        assertEquals(uploaded.chunkCount(), service.rebuild().chunkCount());
+        assertEquals(ids, keyword.ids);
+        assertEquals(keyword.ids, vector.ids);
     }
 
     // 统一创建具备相同分块、向量维度和清单目录配置的测试服务。

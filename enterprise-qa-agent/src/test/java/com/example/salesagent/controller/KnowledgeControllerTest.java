@@ -26,22 +26,22 @@ class KnowledgeControllerTest {
     void multipartUploadReturnsIndexedStatus() throws Exception {
         // 不打开真实索引，使用服务替身隔离控制器行为。
         var ingestion = mock(KnowledgeIngestionService.class);
-        // 以 UTF-8 创建中文文档字节，模拟正常知识文件。
-        byte[] content = "产品资料".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        // 使用真实 PDF 字节，验证 multipart 原样交给服务层。
+        byte[] content = com.example.salesagent.rag.PdfTestDocuments.text("Product details");
         // 上传指定文件时返回两个分块且就绪的重建状态。
-        when(ingestion.upload("product.md", content)).thenReturn(new RebuildStatus(true, 2, null, "重建完成"));
+        when(ingestion.upload("product.pdf", content)).thenReturn(new RebuildStatus(true, 2, null, "重建完成"));
         // 仅注册知识控制器，避免启动模型、向量数据库或整个 Spring 应用。
         var mvc = MockMvcBuilders.standaloneSetup(new KnowledgeController(ingestion))
                 // 加入真实异常处理器，覆盖参数错误到 HTTP 响应的映射。
                 .setControllerAdvice(new ApiExceptionHandler()).build();
         // 发送名为 file 的 multipart 文档，文件名和字节与替身期望一致。
-        mvc.perform(multipart("/api/knowledge/upload").file(new MockMultipartFile("file", "product.md", "text/plain", content)))
+        mvc.perform(multipart("/api/knowledge/upload").file(new MockMultipartFile("file", "product.pdf", "application/pdf", content)))
                 // 验证上传成功返回 200，并正确序列化知识库就绪标志。
                 .andExpect(status().isOk()).andExpect(jsonPath("$.ready").value(true))
                 // 验证重建状态中的分块数没有被控制器丢失。
                 .andExpect(jsonPath("$.chunkCount").value(2));
         // 验证控制器把文件名与原始字节交给了摄取服务。
-        verify(ingestion).upload("product.md", content);
+        verify(ingestion).upload("product.pdf", content);
         // 缺少 file 表单部分时应返回 400，不能当作成功上传。
         mvc.perform(multipart("/api/knowledge/upload")).andExpect(status().isBadRequest());
     }
@@ -53,14 +53,14 @@ class KnowledgeControllerTest {
         // 使用服务替身，专门模拟 UTF-8 校验失败。
         var ingestion = mock(KnowledgeIngestionService.class);
         // 任意上传都抛出固定编码错误，检查控制器的异常转换路径。
-        when(ingestion.upload(anyString(), any())).thenThrow(new IllegalArgumentException("文件必须使用 UTF-8 编码"));
+        when(ingestion.upload(anyString(), any())).thenThrow(new IllegalArgumentException("Markdown 文件必须使用 UTF-8 编码"));
         // 构建只包含知识控制器的 MVC 测试环境。
         var mvc = MockMvcBuilders.standaloneSetup(new KnowledgeController(ingestion))
                 // 使用实际全局异常处理器输出 error 字段。
                 .setControllerAdvice(new ApiExceptionHandler()).build();
         // 上传含非法 UTF-8 字节的文本文件，走服务层拒绝分支。
-        mvc.perform(multipart("/api/knowledge/upload").file(new MockMultipartFile("file", "bad.txt", "text/plain", new byte[]{(byte) 0xff})))
+        mvc.perform(multipart("/api/knowledge/upload").file(new MockMultipartFile("file", "bad.md", "text/plain", new byte[]{(byte) 0xff})))
                 // 检查 400 状态和具体编码说明，避免只返回泛化的参数错误。
-                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("文件必须使用 UTF-8 编码"));
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("Markdown 文件必须使用 UTF-8 编码"));
     }
 }

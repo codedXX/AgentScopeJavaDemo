@@ -98,36 +98,25 @@ public final class KnowledgeIngestionService implements KnowledgeReadiness {
     }
 
     /** 文件和索引更新共用同一写锁；失败时保留原文件，供重建重试。 */
-    // 校验上传文件名称和正文编码，然后保存资料并重建索引。
+    // 校验上传文件名称并提取正文，然后保存原始资料并重建索引。
     public RebuildStatus upload(String filename, byte[] content) {
         // 拒绝空名称、过长名称和路径分隔符，防止上传路径逃逸。
         if (filename == null || filename.length() > 120 || filename.contains("/") || filename.contains("\\")
                 // 继续拒绝换行、制表符等控制字符，保证文件名可安全展示。
                 || filename.chars().anyMatch(Character::isISOControl)
-                // 使用固定区域规则转小写，只允许 Markdown 与纯文本扩展名。
-                || !filename.toLowerCase(java.util.Locale.ROOT).matches(".+\\.(md|txt)")) {
+                // 上传与重建使用相同的 PDF / Markdown 格式白名单。
+                || !KnowledgeDocumentReader.supports(filename)) {
             // 向调用方返回上传名称或格式限制的具体说明。
-            throw new IllegalArgumentException("仅支持文件名不超过120字符的 TXT、Markdown 文件");
+            throw new IllegalArgumentException("仅支持文件名不超过120字符的 PDF、Markdown 文件");
         }
         // 校验正文至少一个字节且不超过 5 MiB。
         if (content.length == 0 || content.length > 5 * 1024 * 1024) {
             // 拒绝空文件或超过上传大小限制的内容。
             throw new IllegalArgumentException("文件不能为空，且不能超过 5 MB");
         }
-        // 使用严格 UTF-8 解码确认上传内容可作为文本处理。
-        try {
-            // 由 UTF-8 解码器将上传字节解析为字符串；非法序列会抛出编码异常。
-            String text = StandardCharsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(content)).toString();
-            // 忽略 BOM 后仍需有正文，并且不允许含有 NUL 字符。
-            if (text.replace("\uFEFF", "").isBlank() || text.indexOf('\0') >= 0) {
-                // 拒绝只有 BOM、空白或包含二进制特征的上传文件。
-                throw new IllegalArgumentException("请上传包含正文的 UTF-8 文本文件");
-            }
-        // 捕获非法 UTF-8 字节序列导致的解码失败。
-        } catch (java.nio.charset.CharacterCodingException e) {
-            // 告知调用方上传内容必须使用 UTF-8 编码。
-            throw new IllegalArgumentException("文件必须使用 UTF-8 编码", e);
-        }
+        // 在修改索引状态或保存文件前解析，非法 PDF 不影响现有知识库。
+        String text = KnowledgeDocumentReader.read(filename, content);
+        if (text.isBlank()) throw new IllegalArgumentException("请上传包含正文的 UTF-8 Markdown 文件");
         // 名称和内容通过校验后，在同一次写锁保护下执行保存与重建。
         return rebuildWithUpload(filename, content);
     }
@@ -239,7 +228,7 @@ public final class KnowledgeIngestionService implements KnowledgeReadiness {
         finally { lock.readLock().unlock(); }
     }
 
-    // 递归扫描知识目录中的 Markdown 和纯文本文件并切分。
+    // 递归扫描知识目录中的 PDF 和 Markdown 文件并切分。
     private List<KnowledgeChunk> readChunks() throws IOException {
         // 知识目录不存在或不是目录时明确报告配置问题。
         if (!Files.isDirectory(knowledgeDir)) throw new IllegalStateException("知识目录不存在: " + knowledgeDir);
@@ -250,12 +239,7 @@ public final class KnowledgeIngestionService implements KnowledgeReadiness {
             // 过滤目录和其他非普通文件条目。
             paths.filter(Files::isRegularFile)
                     // 根据文件扩展名筛选受支持的知识文件。
-                    .filter(path -> {
-                        // 取得文件名称并转为小写，用于扩展名匹配。
-                        String name = path.getFileName().toString().toLowerCase();
-                        // 只接受 .md 与 .txt 文件。
-                        return name.endsWith(".md") || name.endsWith(".txt");
-                    })
+                    .filter(path -> KnowledgeDocumentReader.supports(path.getFileName().toString()))
                     // 排序路径，保证相同资料重建时分块顺序可重复。
                     .sorted()
                     // 切分每个受支持文件，并把其全部子块追加到结果。

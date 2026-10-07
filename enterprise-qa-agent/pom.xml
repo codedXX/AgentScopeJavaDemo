@@ -39,6 +39,12 @@
   </properties>
   <!-- 声明编译与测试所需库，Spring Boot 父工程管理未显式指定的版本。 -->
   <dependencies>
+    <!-- 提取 PDF 正文，供知识库分块与检索使用。 -->
+    <dependency>
+      <groupId>org.apache.pdfbox</groupId>
+      <artifactId>pdfbox</artifactId>
+      <version>3.0.8</version>
+    </dependency>
     <!-- MySQL 官方 JDBC 驱动，版本由 Spring Boot 管理。 -->
     <dependency>
       <groupId>com.mysql</groupId>

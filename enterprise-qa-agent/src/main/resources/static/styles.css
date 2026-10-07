@@ -757,6 +757,16 @@ textarea:focus-visible {
     padding:0 15px 14px
   }
 }
+/* 图片输入、预览与历史消息的缩略图布局。 */
+.composer-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.composer-actions span { font-size:11px; color:var(--muted, #6b7280); }
+.image-previews, .message-images { display:flex; flex-wrap:wrap; gap:10px; padding:8px 0; }
+.image-previews[hidden] { display:none; }
+.image-preview { position:relative; }
+.image-preview img { display:block; width:76px; height:76px; object-fit:cover; border-radius:8px; }
+.image-remove { position:absolute; top:-5px; right:-5px; width:24px; height:24px; padding:0; border-radius:50%; background:#fff; border:1px solid #d1d5db; color:#374151; cursor:pointer; }
+.message-images img { display:block; max-width:220px; max-height:180px; object-fit:contain; border-radius:8px; }
+.composer.dragging { outline:2px dashed #518967; outline-offset:3px; }
 /* 尊重减少动态效果的系统偏好，关闭平滑滚动和过渡。 */
 @media(prefers-reduced-motion:reduce) {
   /* 所有元素统一尺寸计算，移动偏好规则中也可统一关闭动画。 */

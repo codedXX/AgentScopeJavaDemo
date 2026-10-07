@@ -25,12 +25,16 @@ public class LlmGateway {
     }
     // 用系统约束和输入数据生成指定 Java 类型的结构化结果。
     public <T> T structured(String system, String input, Class<T> type) {
+        return structured(system, Msg.builder().name("user").role(MsgRole.USER).textContent(input).build(), type);
+    }
+    // 图片摘要使用相同的调用流程，保留消息中的图片块。
+    public <T> T structured(String system, Msg input, Class<T> type) {
         // 创建单次使用的 Agent，设置名称和实际模型。
         var agent = ReActAgent.builder().name("enterprise-structured").model(models.getObject())
             // 使用调用者提供的系统提示词，最多执行两轮以完成结构化响应。
             .sysPrompt(system).maxIters(2).build();
         // 将输入构造为用户消息，并要求 AgentScope 按 type 解析结构化数据。
-        var result = agent.call(Msg.builder().name("user").role(MsgRole.USER).textContent(input).build(), type)
+        var result = agent.call(input, type)
             // 最多等待 25 秒，避免规划或摘要无限阻塞。
             .block(Duration.ofSeconds(25));
         // 只有有效结构化结果才可以返回，空响应或解析失败交由调用者处理。

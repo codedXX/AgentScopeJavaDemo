@@ -11,7 +11,6 @@ import dev.langchain4j.data.document.DocumentSplitter;
 import dev.langchain4j.data.document.splitter.DocumentSplitters;
 // 引入 IOException，用于文件或网络 I/O 受检异常。
 import java.io.IOException;
-// 引入 StandardCharsets，用于明确指定 UTF-8 文本编码。
 import java.nio.charset.StandardCharsets;
 // 引入 Path，用于安全组合与规范化文件路径。
 import java.nio.file.Path;
@@ -26,7 +25,7 @@ import java.util.HexFormat;
 // 引入 List，用于有序分块、向量或命中集合。
 import java.util.List;
 
-/** 清洗 UTF-8 文档，并委托 LangChain4j 的字符递归切分器处理中文文本。 */
+/** 提取 PDF / Markdown 正文，并委托 LangChain4j 的字符递归切分器处理中文文本。 */
 // 负责将知识文件清洗为子块；可选地保存语义父块，供检索命中后恢复上下文。
 public final class DocumentChunker {
     // 规范化后的知识根目录，用于限制读取范围并生成相对来源路径。
@@ -97,8 +96,8 @@ public final class DocumentChunker {
         String text;
         // 集中处理文件读取产生的受检异常。
         try {
-            // 按照 UTF-8 编码读取完整正文，避免中文字符依赖系统默认编码。
-            text = java.nio.file.Files.readString(normalizedFile, StandardCharsets.UTF_8)
+            // PDF 提取文字，Markdown 按 UTF-8 读取，随后共用清洗与分块规则。
+            text = KnowledgeDocumentReader.read(normalizedFile)
                     // 将 Windows 和旧式回车换行统一为换行符。
                     .replace("\r\n", "\n").replace('\r', '\n')
                     // 将制表符、纵向制表符、换页符与连续空格压缩成单个空格。

@@ -14,6 +14,11 @@ import org.springframework.context.annotation.*;
 @Profile("app")
 // 装配会话持久化、任务规划、业务查询和导出所需的企业组件。
 public class EnterpriseConfiguration {
+    @Bean
+    com.example.salesagent.attachment.ImageAttachmentStore images(
+            @org.springframework.beans.factory.annotation.Value("${enterprise.image-dir:./data/images}") String directory) {
+        return new com.example.salesagent.attachment.ImageAttachmentStore(java.nio.file.Path.of(directory));
+    }
     // 注册持久化会话存储，路径来自 enterprise.session-dir。
     @Bean
     // 会话存储工厂通过企业配置取得持久化目录。

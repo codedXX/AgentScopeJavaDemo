@@ -14,10 +14,23 @@
 | ReAct / Function Calling | AgentScope 工具循环，读取仓库、查询价格库存、Text2SQL |
 | Plan-and-Execute | 复合任务先生成并验证最多 5 步的依赖计划，再执行各步，失败依赖跳过，最后汇总 |
 | 长程交互 | 最近约 10 轮 + 早期摘要，原子文件持久化，重启恢复；浏览器保留会话 ID |
+| 图片提问 | 选择、粘贴或拖入 PNG/JPEG；最多 4 张，每张 5 MB、1600 万像素以内；支持只发图片、历史预览与带图追问 |
 | MCP | Streamable HTTP 暴露仓库、业务、生成模型、Embedding、RAG、数据查询 |
 | Text2SQL | 自然语言生成只读 SQL，筛选、JOIN、GROUP BY 统计，真实执行，支持 XLSX 下载 |
 | 兜底 / 敏感问题 | 规则拦截、知识不足工具补充、来源校验、工具失败兜底、SQL AST 与数据库只读权限 |
 | 评测 | source/chunk 级 Recall@K、MRR、RAGAS Faithfulness、人工一次答准率、Badcase 文件 |
+
+### 图片提问接口
+
+页面输入框旁的“＋ 图片”可选择图片，也可粘贴或拖入图片。发送失败时保留问题和附件，重试复用已经上传的附件 ID。
+
+1. `POST /api/images`：`multipart/form-data`，字段为 `sessionId` 和 `file`。返回 `{ "id": "图片UUID", "url": "/api/sessions/会话ID/images/图片UUID", "contentType": "image/png", "size": 1234 }`。
+2. `POST /api/chat`：JSON 示例为 `{ "sessionId": "同一会话ID", "message": "描述这张图", "imageIds": ["图片UUID"] }`。允许 `message` 为空，但文字和图片至少提供一种；原来的纯文字请求仍兼容。
+3. `GET /api/sessions/{sessionId}/images/{imageId}`：读取该会话图片。会话历史的用户消息包含 `imageIds`，用于刷新后的图片展示。
+
+附件保存在 `enterprise.image-dir`（默认 `./data/images`），按会话隔离。请与 `./data/sessions` 一起保留以支持重启恢复；目前附件持久保留，不自动过期。此演示沿用会话 ID 访问方式，未增加用户登录鉴权。
+
+图片以 AgentScope `ImageBlock` 和 Base64 图片数据进入意图分类、回答及图片计划步骤。纯图片分析走 `IMAGE` 路由，无需知识库就绪或 MCP；实时价格、库存和数据库统计继续要求相应工具证据。近期约 10 轮保留原图引用，较早图片在历史压缩时提取文字概要。图片附件不会自动进入共享知识库。
 
 ## 2. 启动（PowerShell）
 
@@ -88,7 +101,7 @@ java -jar target/enterprise-qa-agent-1.0.0.jar --spring.profiles.active=app
 Invoke-RestMethod http://127.0.0.1:8085/api/knowledge/rebuild -Method Post
 ```
 
-浏览器打开 **http://127.0.0.1:8085/**。可以上传 UTF-8 Markdown/TXT、连续问答、查看来源和步骤，也可以使用左侧业务查询生成 Excel。`.env.example` 只说明变量，Spring Boot 不会自动读取它。
+浏览器打开 **http://127.0.0.1:8085/**。可以上传 PDF / UTF-8 Markdown（最大 5 MB）、连续问答、查看来源和步骤，也可以使用左侧业务查询生成 Excel。PDF 正文通过 [Apache PDFBox](https://pdfbox.apache.org/) 提取后分块入库；扫描版或图片 PDF 须先进行 OCR，加密 PDF 须先解除密码保护。不再支持 TXT 上传，重建时只读取 PDF 和 Markdown 文件。`.env.example` 只说明变量，Spring Boot 不会自动读取它。
 
 可直接提问：
 

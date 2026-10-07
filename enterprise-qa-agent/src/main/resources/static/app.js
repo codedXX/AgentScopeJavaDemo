@@ -8,6 +8,8 @@ let sessionId = localStorage.getItem('enterprise-session');
 let sending = false;
 // 记录知识索引是否重建中，避免上传和查询同时修改知识状态。
 let indexing = false;
+// 待发送图片保留 File 和上传后的 ID，失败重试无需重复上传。
+let pendingImages = [];
 // 统一发送 HTTP 请求、解析 JSON 并处理后端错误。
 async function request(url, options = {}) {
   // 等待 HTTP 响应，options 可指定 GET/POST、请求头和请求体。
@@ -66,13 +68,77 @@ function controls() {
   $('rebuild').disabled = indexing || sending;
   // 重建进行中禁止更换待上传文件。
   $('file').disabled = indexing;
+  $('choose-images').disabled = sending || indexing;
+  $('chat-images').disabled = sending || indexing;
+  $('question').disabled = sending;
+  document.querySelectorAll('.image-remove').forEach(button => { button.disabled = sending || indexing; });
 }
-// 上传前快速检查扩展名和大小；后台仍会独立校验 UTF-8 与内容。
+function imageUrl(id, conversationId = sessionId) {
+  return `/api/sessions/${encodeURIComponent(conversationId)}/images/${encodeURIComponent(id)}`;
+}
+
+function clearPendingImages() {
+  pendingImages.forEach(item => URL.revokeObjectURL(item.preview));
+  pendingImages = [];
+  renderImagePreviews();
+}
+
+function renderImagePreviews() {
+  const container = $('image-previews');
+  container.replaceChildren();
+  container.hidden = pendingImages.length === 0;
+  for (const item of pendingImages) {
+    const tile = document.createElement('div'); tile.className = 'image-preview';
+    const img = document.createElement('img'); img.src = item.preview; img.alt = item.file.name;
+    const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'image-remove';
+    remove.textContent = '×'; remove.setAttribute('aria-label', `移除 ${item.file.name}`);
+    remove.disabled = sending || indexing;
+    remove.addEventListener('click', () => {
+      if (sending || indexing) return;
+      URL.revokeObjectURL(item.preview);
+      pendingImages = pendingImages.filter(candidate => candidate !== item);
+      renderImagePreviews();
+    });
+    tile.append(img, remove); container.append(tile);
+  }
+}
+
+function selectImages(files) {
+  if (sending || indexing) return;
+  const selected = Array.from(files);
+  if (!selected.length) return;
+  if (selected.length + pendingImages.length > 4) {
+    feedback('chat-feedback', '每次最多发送 4 张图片。', true); return;
+  }
+  if (selected.some(file => !['image/png', 'image/jpeg'].includes(file.type) || file.size === 0 || file.size > 5 * 1024 * 1024)) {
+    feedback('chat-feedback', '请选择非空的 PNG/JPEG 图片，每张不超过 5 MB。', true); return;
+  }
+  pendingImages.push(...selected.map(file => ({ file, preview: URL.createObjectURL(file), id: null })));
+  renderImagePreviews(); feedback('chat-feedback', '');
+}
+
+$('choose-images').addEventListener('click', () => $('chat-images').click());
+$('chat-images').addEventListener('change', () => {
+  selectImages($('chat-images').files); $('chat-images').value = '';
+});
+$('question').addEventListener('paste', event => {
+  const files = Array.from(event.clipboardData?.files || []);
+  if (files.length) { event.preventDefault(); selectImages(files); }
+});
+for (const name of ['dragenter', 'dragover']) $('chat-form').addEventListener(name, event => {
+  if (!Array.from(event.dataTransfer.types).includes('Files')) return;
+  event.preventDefault(); if (!sending && !indexing) $('chat-form').classList.add('dragging');
+});
+$('chat-form').addEventListener('dragleave', () => $('chat-form').classList.remove('dragging'));
+$('chat-form').addEventListener('drop', event => {
+  event.preventDefault(); $('chat-form').classList.remove('dragging'); selectImages(event.dataTransfer.files);
+});
+// 上传前快速检查扩展名和大小；后台仍会独立提取正文并验证内容。
 function validateFile(file) {
   // 没有选择文件时拒绝上传，给出直接操作指引。
   if (!file) throw new Error('请先选择文件');
-  // 只允许 TXT/Markdown 扩展名，不在前端假设可以解析 PDF 或图片。
-  if (!/\.(txt|md)$/i.test(file.name)) throw new Error('目前支持 TXT 和 Markdown 文件');
+  // 只允许 PDF/Markdown，与后台文档读取规则一致。
+  if (!/\.(pdf|md)$/i.test(file.name)) throw new Error('目前支持 PDF 和 Markdown 文件');
   // 拒绝空文件和超过 5 MB 的文件，与后端限制一致。
   if (file.size === 0 || file.size > 5 * 1024 * 1024) throw new Error('请选择非空且不超过 5 MB 的文件');
 }
@@ -155,7 +221,7 @@ $('rebuild').addEventListener('click', () => indexKnowledge());
 // 手动刷新按钮只读取后台状态，不修改知识库。
 $('refresh').addEventListener('click', refresh);
 // 创建一条纯文本用户或助手消息，并滚动到对话底部。
-function addMessage(role, text) {
+function addMessage(role, text, imageIds = [], conversationId = sessionId) {
   // 出现真实消息后隐藏欢迎区，避免与对话混在一起。
   $('welcome').hidden = true;
   // 创建消息容器并按 user/assistant 角色选择展示样式。
@@ -165,7 +231,19 @@ function addMessage(role, text) {
   // 正文用 textContent 写入，服务端输出不会作为 HTML 执行。
   const body = document.createElement('div'); body.className = 'message-body'; body.textContent = text;
   // 把角色与正文加入消息区，滚动到新消息，并返回容器以便稍后更新。
-  article.append(label, body); $('messages').append(article); scrollMessages(); return article;
+  article.append(label, body);
+  if (imageIds.length) {
+    const gallery = document.createElement('div'); gallery.className = 'message-images';
+    for (const id of imageIds) {
+      const link = document.createElement('a'); link.href = imageUrl(id, conversationId); link.target = '_blank'; link.rel = 'noopener';
+      const img = document.createElement('img'); img.src = link.href; img.alt = '用户上传的图片'; img.loading = 'lazy';
+      img.addEventListener('load', scrollMessages);
+      img.addEventListener('error', () => { img.replaceWith(document.createTextNode('图片无法加载，请重新上传')); });
+      link.append(img); gallery.append(link);
+    }
+    article.append(gallery);
+  }
+  $('messages').append(article); scrollMessages(); return article;
 }
 // 将滚动位置设为消息区总高度，让最新内容可见。
 function scrollMessages() { $('messages').scrollTop = $('messages').scrollHeight; }
@@ -191,20 +269,33 @@ $('chat-form').addEventListener('submit', async e => {
   // 去除问题两端空白，避免提交看起来空但仍含空格的输入。
   const message = $('question').value.trim();
   // 空问题或当前已有问答/建库时不发起请求。
-  if (!message || sending || indexing) return;
+  if (sending || indexing) return;
+  if (!message && !pendingImages.length) { feedback('chat-feedback', '请输入问题或选择图片。', true); return; }
   // 客户端提前生成 ID，使网络失败后重试仍然沿用同一会话。
   // 首次发问前生成会话 ID；失败重试仍沿用同一 ID，避免创建重复历史。
   sessionId ||= crypto.randomUUID();
   // 标记问答进行中、禁用冲突按钮并清理旧反馈。
   sending = true; controls(); feedback('chat-feedback', '');
   // 立刻显示用户问题并清空编辑框，让用户看到已提交内容。
-  addMessage('user', message); $('question').value = '';
+  const selected = [...pendingImages];
+  let answer;
   // 先建立助手占位消息，后台返回后在同一容器替换正文。
-  const answer = addMessage('assistant', '正在查找资料并整理回答…');
   // 把可能失败的请求放入保护范围，对应 catch 负责展示可理解的提示。
   try {
+    if (selected.length) feedback('chat-feedback', '正在上传图片…');
+    for (const item of selected) {
+      if (item.id) continue;
+      const form = new FormData(); form.append('sessionId', sessionId); form.append('file', item.file);
+      const uploaded = await request('/api/images', { method: 'POST', body: form });
+      item.id = uploaded.id;
+    }
+    const imageIds = selected.map(item => item.id);
+    addMessage('user', message, imageIds); $('question').value = '';
+    answer = addMessage('assistant', '正在分析问题并整理回答…');
+    feedback('chat-feedback', '');
     // 以 JSON 提交固定会话 ID 与问题，等待来源、步骤及回答。
-    const data = await request('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId, message }) });
+    const data = await request('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId, message, imageIds }) });
+    clearPendingImages();
     // 使用后台确认的会话 ID，并保存到 localStorage 供刷新恢复。
     sessionId = data.sessionId; localStorage.setItem('enterprise-session', sessionId);
     // 用实际答案替换占位消息，继续保持纯文本渲染。
@@ -218,11 +309,11 @@ $('chat-form').addEventListener('submit', async e => {
   // 把 HTTP 或解析失败转换为页面反馈，保留界面操作入口。
   } catch (error) {
     // 失败时更新当前占位消息，让用户明确这次没有取得回答。
-    answer.querySelector('.message-body').textContent = `未能取得回答：${error.message}`;
+    if (answer) answer.querySelector('.message-body').textContent = `未能取得回答：${error.message}`;
     // 编辑框仍为空时恢复失败问题，避免覆盖用户已开始输入的新内容。
     if (!$('question').value.trim()) $('question').value = message;
     // 保留问题可重试状态，引导检查服务后重新提交。
-    feedback('chat-feedback', '问题仍可编辑；检查服务后重新发送。', true);
+    feedback('chat-feedback', `${error.message}；问题和图片已保留，可重新发送。`, true);
   // 总是解除发送状态、刷新按钮和滚动位置，并把焦点还给编辑框。
   } finally { sending = false; controls(); scrollMessages(); $('question').focus(); }
 });
@@ -233,6 +324,7 @@ $('question').addEventListener('keydown', e => {
 });
 // 开始新对话时清理浏览器会话标记与当前消息展示。
 $('new-chat').addEventListener('click', () => {
+  clearPendingImages();
   // 删除本地会话 ID 和页面消息；后台旧会话文件仍可按 ID 恢复。
   sessionId = null; localStorage.removeItem('enterprise-session'); document.querySelectorAll('.message').forEach(node => node.remove());
   // 恢复欢迎区、清空编辑框及反馈，并准备下一次输入。
@@ -250,12 +342,14 @@ void refresh();
 async function restoreConversation() {
   // 没有保存过会话 ID 时无需发历史请求。
   if (!sessionId) return;
+  const restoringId = sessionId;
   // 把可能失败的请求放入保护范围，对应 catch 负责展示可理解的提示。
   try {
     // 编码会话 ID 后调用只读恢复接口，避免 ID 中的特殊字符改变 URL。
     const history = await request('/api/sessions/' + encodeURIComponent(sessionId));
+    if (sessionId !== restoringId || sending) return;
     // 逐条恢复用户/助手文本，缺失 turns 时按空历史处理。
-    for (const turn of history.turns || []) addMessage(turn.role === 'assistant' ? 'assistant' : 'user', turn.text);
+    for (const turn of history.turns || []) addMessage(turn.role === 'assistant' ? 'assistant' : 'user', turn.text, turn.imageIds || [], restoringId);
     // 有早期摘要时提醒用户：页面显示近期轮次，助手仍掌握早期概要。
     if (history.summary) feedback('chat-feedback', '已恢复最近对话，助手保留早期对话摘要。');
   // 历史读取失败单独提示，不妨碍用户开始新的提问。

@@ -61,11 +61,12 @@ public class ApiExceptionHandler {
     }
 
     // 缺少必需的 file 表单部分时提供上传提示。
-    @ExceptionHandler(org.springframework.web.multipart.support.MissingServletRequestPartException.class)
+    @ExceptionHandler({org.springframework.web.multipart.support.MissingServletRequestPartException.class,
+            org.springframework.web.bind.MissingServletRequestParameterException.class})
     // 将缺失上传文件映射为客户端错误。
     public ResponseEntity<?> missingFile(Exception ex) {
         // 使用 400 并要求用户先选择文件。
-        return ResponseEntity.badRequest().body(Map.of("error", "请选择需要上传的文件"));
+        return ResponseEntity.badRequest().body(Map.of("error", "请选择需要上传的文件，并提供必需的会话参数"));
     }
 
     // 为其他未被专门处理的异常提供最终兜底。

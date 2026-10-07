@@ -35,7 +35,7 @@ demo:
     timeout-seconds: 20
   # 文档切分和两路召回的基础参数。
   rag:
-    # 读取原始 UTF-8 文档的目录，上传文档也保存到它下面。
+    # 读取 PDF 和 UTF-8 Markdown 文档的目录，上传文档也保存到它下面。
     knowledge-dir: ./knowledge
     # 按向量后端区分 Lucene 与 manifest 目录，避免切换后端混用索引。
     index-dir: ./data/${VECTOR_BACKEND:milvus}/lucene
@@ -109,6 +109,8 @@ enterprise:
   cache-seconds: 60
   # 会话近期历史与摘要保存目录，采用哈希文件名和原子替换。
   session-dir: ./data/sessions
+  # 用户提问的图片附件，按会话隔离保存。
+  image-dir: ./data/images
   # 业务查询生成的 XLSX 文件保存目录。
   export-dir: ./data/exports
   # 本机 MySQL 业务演示库；先运行 scripts/init-mysql-demo.ps1 创建表和数据。
